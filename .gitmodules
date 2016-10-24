@@ -7,3 +7,6 @@
 [submodule "user/cm/system/core"]
 	path = user/cm/system/core
 	url = https://github.com/CyanogenMod/android_system_core.git
+[submodule "user/sysroot"]
+	path = user/sysroot
+	url = https://github.com/W4118/binary-hmwk3.git
