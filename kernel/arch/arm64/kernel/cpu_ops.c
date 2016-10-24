@@ -22,29 +22,20 @@
 #include <linux/of.h>
 #include <linux/string.h>
 
-extern const struct cpu_operations smp_spin_table_ops;
-extern const struct cpu_operations cpu_psci_ops;
-
 const struct cpu_operations *cpu_ops[NR_CPUS];
+extern struct cpu_operations *__cpu_method_of_table[];
+extern struct cpu_operations *__cpu_method_of_table_end[];
 
-static const struct cpu_operations *supported_cpu_ops[] __initconst = {
-#ifdef CONFIG_SMP
-	&smp_spin_table_ops,
-	&cpu_psci_ops,
-#endif
-	NULL,
-};
-
-static const struct cpu_operations * __init cpu_get_ops(const char *name)
+const struct cpu_operations * __init cpu_get_ops(const char *name)
 {
-	const struct cpu_operations **ops = supported_cpu_ops;
+	const struct cpu_operations **start = (void *)__cpu_method_of_table;
+	const struct cpu_operations **end = (void *)__cpu_method_of_table_end;
 
-	while (*ops) {
-		if (!strcmp(name, (*ops)->name))
-			return *ops;
-
-		ops++;
-	}
+	while (start < end) {
+		if (!strcmp((*start)->name, name))
+			return *start;
+		start++;
+	};
 
 	return NULL;
 }
@@ -78,22 +69,10 @@ int __init cpu_read_ops(struct device_node *dn, int cpu)
 
 void __init cpu_read_bootcpu_ops(void)
 {
-	struct device_node *dn = NULL;
-	u64 mpidr = cpu_logical_map(0);
-
-	while ((dn = of_find_node_by_type(dn, "cpu"))) {
-		u64 hwid;
-		const __be32 *prop;
-
-		prop = of_get_property(dn, "reg", NULL);
-		if (!prop)
-			continue;
-
-		hwid = of_read_number(prop, of_n_addr_cells(dn));
-		if (hwid == mpidr) {
-			cpu_read_ops(dn, 0);
-			of_node_put(dn);
-			return;
-		}
+	struct device_node *dn = of_get_cpu_node(0, NULL);
+	if (!dn) {
+		pr_err("Failed to find device node for boot cpu\n");
+		return;
 	}
+	cpu_read_ops(dn, 0);
 }

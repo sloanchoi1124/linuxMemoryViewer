@@ -79,7 +79,6 @@
  * These are the PRID's for when 23:16 == PRID_COMP_MIPS
  */
 
-#define PRID_IMP_QEMU           0x0000
 #define PRID_IMP_4KC		0x8000
 #define PRID_IMP_5KC		0x8100
 #define PRID_IMP_20KC		0x8200
@@ -98,13 +97,6 @@
 #define PRID_IMP_1074K		0x9a00
 #define PRID_IMP_M14KC		0x9c00
 #define PRID_IMP_M14KEC		0x9e00
-#define PRID_IMP_INTERAPTIV_UP	0xa000
-#define PRID_IMP_INTERAPTIV_MP	0xa100
-#define PRID_IMP_PROAPTIV_UP	0xa200
-#define PRID_IMP_PROAPTIV_MP	0xa300
-#define PRID_IMP_VIRTUOSO       0xa700
-#define PRID_IMP_P5600          0xa800
-#define PRID_IMP_SAMURAI_UP     0xa900
 
 /*
  * These are the PRID's for when 23:16 == PRID_COMP_SIBYTE
@@ -273,21 +265,18 @@ enum cpu_type_enum {
 	CPU_4KC, CPU_4KEC, CPU_4KSC, CPU_24K, CPU_34K, CPU_1004K, CPU_74K,
 	CPU_ALCHEMY, CPU_PR4450, CPU_BMIPS32, CPU_BMIPS3300, CPU_BMIPS4350,
 	CPU_BMIPS4380, CPU_BMIPS5000, CPU_JZRISC, CPU_LOONGSON1, CPU_M14KC,
-	CPU_M14KEC, CPU_PROAPTIV, CPU_INTERAPTIV, CPU_VIRTUOSO,
-	CPU_P5600,
+	CPU_M14KEC,
 
 	/*
 	 * MIPS64 class processors
 	 */
 	CPU_5KC, CPU_5KE, CPU_20KC, CPU_25KF, CPU_SB1, CPU_SB1A, CPU_LOONGSON2,
 	CPU_CAVIUM_OCTEON, CPU_CAVIUM_OCTEON_PLUS, CPU_CAVIUM_OCTEON2,
-	CPU_XLR, CPU_XLP, CPU_SAMURAI,
+	CPU_XLR, CPU_XLP,
 
-	CPU_QEMU,
 	CPU_LAST
 };
 
-#define MIPS_FTLB_CAPABLE       0x1
 
 /*
  * ISA Level encodings
@@ -302,14 +291,11 @@ enum cpu_type_enum {
 #define MIPS_CPU_ISA_M32R2	0x00000040
 #define MIPS_CPU_ISA_M64R1	0x00000080
 #define MIPS_CPU_ISA_M64R2	0x00000100
-#define MIPS_CPU_ISA_M32R6      0x00000200
-#define MIPS_CPU_ISA_M64R6      0x00000400
 
 #define MIPS_CPU_ISA_32BIT (MIPS_CPU_ISA_I | MIPS_CPU_ISA_II | \
-	MIPS_CPU_ISA_M32R1 | MIPS_CPU_ISA_M32R2 |MIPS_CPU_ISA_M32R6)
+	MIPS_CPU_ISA_M32R1 | MIPS_CPU_ISA_M32R2)
 #define MIPS_CPU_ISA_64BIT (MIPS_CPU_ISA_III | MIPS_CPU_ISA_IV | \
-	MIPS_CPU_ISA_V | MIPS_CPU_ISA_M64R1 | MIPS_CPU_ISA_M64R2 | \
-	MIPS_CPU_ISA_M64R6)
+	MIPS_CPU_ISA_V | MIPS_CPU_ISA_M64R1 | MIPS_CPU_ISA_M64R2)
 
 /*
  * CPU Option encodings
@@ -339,24 +325,6 @@ enum cpu_type_enum {
 #define MIPS_CPU_PCI		0x00400000 /* CPU has Perf Ctr Int indicator */
 #define MIPS_CPU_RIXI		0x00800000 /* CPU has TLB Read/eXec Inhibit */
 #define MIPS_CPU_MICROMIPS	0x01000000 /* CPU has microMIPS capability */
-#define MIPS_CPU_SEGMENTS       0x02000000 /* CPU supports memory segmentation */
-#define MIPS_CPU_EVA            0x04000000 /* CPU supports EVA functionality */
-#define MIPS_CPU_TLBINV         0x08000000 /* CPU supports TLBINV/F */
-#define MIPS_CPU_CM2            0x10000000 /* CPU has CM2 */
-#define MIPS_CPU_CM2_L2SYNC     0x20000000 /* CPU has CM2 L2-only SYNC feature */
-#define MIPS_CPU_TLBINV_FULL    0x40000000 /* CPU supports single TLBINV/F for full V/FTLB */
-#define MIPS_CPU_RIXI_EXCEPT    0x80000000 /* CPU has TLB Read/eXec Inhibit exceptions */
-
-/*
- * CPU Option2 encodings
- */
-#define MIPS_CPU_MAAR           0x00000001      /* MAAR exists */
-#define MIPS_CPU_HIMEM          0x00000002 /* MIPS32: PA bits exceed PTE space */
-#define MIPS_CPU_FRE            0x00000004 /* CPU has FRE support */
-#define MIPS_CPU_HTW            0x00000008 /* CPU support Hardware Page Table Walker */
-#define MIPS_CPU_L2C            0x00000010 /* CPU has _NO_ L2 description in Config2 */
-#define MIPS_CPU_VC             0x00000020 /* CPU has VC-MT support: GNR, CM3 virtual GIC etc */
-#define MIPS_CPU_CM3_INCLUSIVE_CACHES       0x00000040 /* L1D is included in L2 */
 
 /*
  * CPU ASE encodings
@@ -369,6 +337,5 @@ enum cpu_type_enum {
 #define MIPS_ASE_MIPSMT		0x00000020 /* CPU supports MIPS MT */
 #define MIPS_ASE_DSP2P		0x00000040 /* Signal Processing ASE Rev 2 */
 #define MIPS_ASE_VZ		0x00000080 /* Virtualization ASE */
-#define MIPS_ASE_MSA		0x00000100 /* MIPS SIMD Architecture */
 
 #endif /* _ASM_CPU_H */

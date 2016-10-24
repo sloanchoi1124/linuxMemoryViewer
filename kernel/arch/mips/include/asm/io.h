@@ -162,9 +162,6 @@ static inline void * isa_bus_to_virt(unsigned long address)
 #define virt_to_bus virt_to_phys
 #define bus_to_virt phys_to_virt
 
-#define phys_to_bus(x)  ((dma_addr_t)(x))
-#define bus_to_phys(x)  ((phys_t)(x))
-
 /*
  * Change "struct page" to physical address.
  */

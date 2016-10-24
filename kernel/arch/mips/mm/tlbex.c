@@ -55,7 +55,7 @@ struct tlb_reg_save {
 	unsigned long b;
 } ____cacheline_aligned_in_smp;
 
-static struct tlb_reg_save handler_reg_save[NR_CPUS * 2];
+static struct tlb_reg_save handler_reg_save[NR_CPUS];
 
 static inline int r45k_bvahwbug(void)
 {
@@ -440,7 +440,6 @@ static void __cpuinit build_r3000_tlb_refill_handler(void)
 		 (unsigned int)(p - tlb_handler));
 
 	memcpy((void *)ebase, tlb_handler, 0x80);
-	local_flush_icache_range(ebase, ebase + 0x80);
 
 	dump_handler("r3000_tlb_refill", (u32 *)ebase, 32);
 }
@@ -512,28 +511,20 @@ static void __cpuinit build_tlb_write_entry(u32 **p, struct uasm_label **l,
 	case tlb_indexed: tlbw = uasm_i_tlbwi; break;
 	}
 
-	if (cpu_has_mips_r2 || cpu_has_mips_r6) {
+	if (cpu_has_mips_r2) {
 		/*
 		 * The architecture spec says an ehb is required here,
 		 * but a number of cores do not have the hazard and
 		 * using an ehb causes an expensive pipeline stall.
 		 */
-		if (cpu_has_mips_r2_exec_hazard) {
-			switch (current_cpu_type()) {
-			case CPU_M14KC:
-			case CPU_M14KEC:
-			case CPU_74K:
-			case CPU_PROAPTIV:
-			case CPU_INTERAPTIV:
-			case CPU_VIRTUOSO:
-			case CPU_P5600:
-			case CPU_SAMURAI:
-				break;
+		switch (current_cpu_type()) {
+		case CPU_M14KC:
+		case CPU_74K:
+			break;
 
-			default:
-				uasm_i_ehb(p);
-				break;
-			}
+		default:
+			uasm_i_ehb(p);
+			break;
 		}
 		tlbw(p);
 		return;
@@ -649,12 +640,7 @@ static __cpuinit __maybe_unused void build_convert_pte_to_entrylo(u32 **p,
 								  unsigned int reg)
 {
 	if (cpu_has_rixi) {
-		if (!cpu_has_himem)
-			UASM_i_ROTR(p, reg, reg, ilog2(_PAGE_GLOBAL));
-		else {
-			UASM_i_SRL(p, reg, reg, ilog2(_PAGE_NO_EXEC));
-			UASM_i_ROTR(p, reg, reg, ilog2(_PAGE_GLOBAL) - ilog2(_PAGE_NO_EXEC));
-		}
+		UASM_i_ROTR(p, reg, reg, ilog2(_PAGE_GLOBAL));
 	} else {
 #ifdef CONFIG_64BIT_PHYS_ADDR
 		uasm_i_dsrl_safe(p, reg, reg, ilog2(_PAGE_GLOBAL));
@@ -987,17 +973,9 @@ build_get_pgde32(u32 **p, unsigned int tmp, unsigned int ptr)
 #endif
 	uasm_i_mfc0(p, tmp, C0_BADVADDR); /* get faulting address */
 	uasm_i_lw(p, ptr, uasm_rel_lo(pgdc), ptr);
-
-	if (cpu_has_mips32r2 || cpu_has_mips32r6) {
-		uasm_i_ext(p, tmp, tmp, PGDIR_SHIFT, (32 - PGDIR_SHIFT));
-		uasm_i_ins(p, ptr, tmp, PGD_T_LOG2, (32 - PGDIR_SHIFT));
-		return;
-	}
-
 	uasm_i_srl(p, tmp, tmp, PGDIR_SHIFT); /* get pgd only bits */
 	uasm_i_sll(p, tmp, tmp, PGD_T_LOG2);
 	uasm_i_addu(p, ptr, ptr, tmp); /* add in pgd offset */
-
 }
 
 #endif /* !CONFIG_64BIT */
@@ -1030,17 +1008,6 @@ static void __cpuinit build_adjust_context(u32 **p, unsigned int ctx)
 
 static void __cpuinit build_get_ptep(u32 **p, unsigned int tmp, unsigned int ptr)
 {
-#ifndef CONFIG_64BIT
-	if (cpu_has_mips_r2 || cpu_has_mips_r6) {
-		/* For MIPS32R2, PTE ptr offset is obtained from BadVAddr */
-		UASM_i_MFC0(p, tmp, C0_BADVADDR);
-		UASM_i_LW(p, ptr, 0, ptr);
-		uasm_i_ext(p, tmp, tmp, PAGE_SHIFT+1, PGDIR_SHIFT-PAGE_SHIFT-1);
-		uasm_i_ins(p, ptr, tmp, PTE_T_LOG2+1, PGDIR_SHIFT-PAGE_SHIFT-1);
-		return;
-	}
-#endif /* CONFIG_64BIT */
-
 	/*
 	 * Bug workaround for the Nevada. It seems as if under certain
 	 * circumstances the move from cp0_context might produce a
@@ -1076,17 +1043,9 @@ static void __cpuinit build_update_entries(u32 **p, unsigned int tmp,
 		uasm_i_ld(p, tmp, 0, ptep); /* get even pte */
 		uasm_i_ld(p, ptep, sizeof(pte_t), ptep); /* get odd pte */
 		if (cpu_has_rixi) {
-			if (!cpu_has_himem) {
-				UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL));
-				UASM_i_MTC0(p, tmp, C0_ENTRYLO0); /* load it */
-				UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL));
-			} else {
-				UASM_i_SRL(p, tmp, tmp, ilog2(_PAGE_NO_EXEC));
-				UASM_i_SRL(p, ptep, ptep, ilog2(_PAGE_NO_EXEC));
-				UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL) - ilog2(_PAGE_NO_EXEC));
-				UASM_i_MTC0(p, tmp, C0_ENTRYLO0); /* load it */
-				UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL) - ilog2(_PAGE_NO_EXEC));
-			}
+			UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL));
+			UASM_i_MTC0(p, tmp, C0_ENTRYLO0); /* load it */
+			UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL));
 		} else {
 			uasm_i_dsrl_safe(p, tmp, tmp, ilog2(_PAGE_GLOBAL)); /* convert to entrylo0 */
 			UASM_i_MTC0(p, tmp, C0_ENTRYLO0); /* load it */
@@ -1109,20 +1068,11 @@ static void __cpuinit build_update_entries(u32 **p, unsigned int tmp,
 	if (r45k_bvahwbug())
 		build_tlb_probe_entry(p);
 	if (cpu_has_rixi) {
-		if (!cpu_has_himem)
-			UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL));
-		else {
-			UASM_i_SRL(p, tmp, tmp, ilog2(_PAGE_NO_EXEC));
-			UASM_i_SRL(p, ptep, ptep, ilog2(_PAGE_NO_EXEC));
-			UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL) - ilog2(_PAGE_NO_EXEC));
-		}
+		UASM_i_ROTR(p, tmp, tmp, ilog2(_PAGE_GLOBAL));
 		if (r4k_250MHZhwbug())
 			UASM_i_MTC0(p, 0, C0_ENTRYLO0);
 		UASM_i_MTC0(p, tmp, C0_ENTRYLO0); /* load it */
-		if (!cpu_has_himem)
-			UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL));
-		else
-			UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL) - ilog2(_PAGE_NO_EXEC));
+		UASM_i_ROTR(p, ptep, ptep, ilog2(_PAGE_GLOBAL));
 	} else {
 		UASM_i_SRL(p, tmp, tmp, ilog2(_PAGE_GLOBAL)); /* convert to entrylo0 */
 		if (r4k_250MHZhwbug())
@@ -1490,7 +1440,6 @@ static void __cpuinit build_r4000_tlb_refill_handler(void)
 		 final_len);
 
 	memcpy((void *)ebase, final_handler, 0x100);
-	local_flush_icache_range(ebase, ebase + 0x100);
 
 	dump_handler("r4000_tlb_refill", (u32 *)ebase, 64);
 }
@@ -1918,16 +1867,8 @@ build_r4000_tlbchange_handler_head(u32 **p, struct uasm_label **l,
 	uasm_l_smp_pgtable_change(l, *p);
 #endif
 	iPTE_LW(p, wr.r1, wr.r2); /* get even pte */
-	if (!m4kc_tlbp_war()) {
+	if (!m4kc_tlbp_war())
 		build_tlb_probe_entry(p);
-		if (cpu_has_htw) {
-			/* race condition happens, leaving */
-			uasm_i_ehb(p);
-			uasm_i_mfc0(p, wr.r3, C0_INDEX);
-			uasm_il_bltz(p, r, wr.r3, label_leave);
-			uasm_i_nop(p);
-		}
-	}
 	return wr;
 }
 
@@ -1979,7 +1920,7 @@ static void __cpuinit build_r4000_tlb_load_handler(void)
 	if (m4kc_tlbp_war())
 		build_tlb_probe_entry(&p);
 
-	if (cpu_has_rixi && !cpu_has_rixi_except) {
+	if (cpu_has_rixi) {
 		/*
 		 * If the page is not _PAGE_VALID, RI or XI could not
 		 * have triggered it.  Skip the expensive test..
@@ -1994,19 +1935,6 @@ static void __cpuinit build_r4000_tlb_load_handler(void)
 		uasm_i_nop(&p);
 
 		uasm_i_tlbr(&p);
-
-		switch (current_cpu_type()) {
-		default:
-			if (cpu_has_mips_r2 || cpu_has_mips_r6) {
-				uasm_i_ehb(&p);
-
-		case CPU_CAVIUM_OCTEON:
-		case CPU_CAVIUM_OCTEON_PLUS:
-		case CPU_CAVIUM_OCTEON2:
-				break;
-			}
-		}
-
 		/* Examine  entrylo 0 or 1 based on ptr. */
 		if (use_bbit_insns()) {
 			uasm_i_bbit0(&p, wr.r2, ilog2(sizeof(pte_t)), 8);
@@ -2046,7 +1974,7 @@ static void __cpuinit build_r4000_tlb_load_handler(void)
 	build_pte_present(&p, &r, wr.r1, wr.r2, wr.r3, label_nopage_tlbl);
 	build_tlb_probe_entry(&p);
 
-	if (cpu_has_rixi && !cpu_has_rixi_except) {
+	if (cpu_has_rixi) {
 		/*
 		 * If the page is not _PAGE_VALID, RI or XI could not
 		 * have triggered it.  Skip the expensive test..
@@ -2061,19 +1989,6 @@ static void __cpuinit build_r4000_tlb_load_handler(void)
 		uasm_i_nop(&p);
 
 		uasm_i_tlbr(&p);
-
-		switch (current_cpu_type()) {
-		default:
-			if (cpu_has_mips_r2 || cpu_has_mips_r6) {
-				uasm_i_ehb(&p);
-
-		case CPU_CAVIUM_OCTEON:
-		case CPU_CAVIUM_OCTEON_PLUS:
-		case CPU_CAVIUM_OCTEON2:
-				break;
-			}
-		}
-
 		/* Examine  entrylo 0 or 1 based on ptr. */
 		if (use_bbit_insns()) {
 			uasm_i_bbit0(&p, wr.r2, ilog2(sizeof(pte_t)), 8);
@@ -2240,108 +2155,6 @@ static void __cpuinit build_r4000_tlb_modify_handler(void)
 	dump_handler("r4000_tlb_modify", handle_tlbm, ARRAY_SIZE(handle_tlbm));
 }
 
-static void print_htw_config(void)
-{
-	unsigned long config;
-	unsigned int pwctl;
-	const int field = 2 * sizeof(unsigned long);
-
-	config = read_c0_pwfield();
-	pr_debug("PWField (0x%0*lx): GDI: 0x%02lx  UDI: 0x%02lx  MDI: 0x%02lx  PTI: 0x%02lx  PTEI: 0x%02lx\n",
-		field, config,
-		(config & MIPS_PWFIELD_GDI_MASK) >> MIPS_PWFIELD_GDI_SHIFT,
-		(config & MIPS_PWFIELD_UDI_MASK) >> MIPS_PWFIELD_UDI_SHIFT,
-		(config & MIPS_PWFIELD_MDI_MASK) >> MIPS_PWFIELD_MDI_SHIFT,
-		(config & MIPS_PWFIELD_PTI_MASK) >> MIPS_PWFIELD_PTI_SHIFT,
-		(config & MIPS_PWFIELD_PTEI_MASK) >> MIPS_PWFIELD_PTEI_SHIFT);
-
-	config = read_c0_pwsize();
-	pr_debug("PWSize  (0x%0*lx): GDW: 0x%02lx  UDW: 0x%02lx  MDW: 0x%02lx  PTW: 0x%02lx  PTEW: 0x%02lx\n",
-		field, config,
-		(config & MIPS_PWSIZE_GDW_MASK) >> MIPS_PWSIZE_GDW_SHIFT,
-		(config & MIPS_PWSIZE_UDW_MASK) >> MIPS_PWSIZE_UDW_SHIFT,
-		(config & MIPS_PWSIZE_MDW_MASK) >> MIPS_PWSIZE_MDW_SHIFT,
-		(config & MIPS_PWSIZE_PTW_MASK) >> MIPS_PWSIZE_PTW_SHIFT,
-		(config & MIPS_PWSIZE_PTEW_MASK) >> MIPS_PWSIZE_PTEW_SHIFT);
-
-	pwctl = read_c0_pwctl();
-	pr_debug("PWCtl   (0x%x): PWEn: 0x%x  DPH: 0x%x  HugePg: 0x%x  Psn: 0x%x\n",
-		pwctl,
-		(pwctl & MIPS_PWCTL_PWEN_MASK) >> MIPS_PWCTL_PWEN_SHIFT,
-		(pwctl & MIPS_PWCTL_DPH_MASK) >> MIPS_PWCTL_DPH_SHIFT,
-		(pwctl & MIPS_PWCTL_HUGEPG_MASK) >> MIPS_PWCTL_HUGEPG_SHIFT,
-		(pwctl & MIPS_PWCTL_PSN_MASK) >> MIPS_PWCTL_PSN_SHIFT);
-}
-
-static void config_htw_params(void)
-{
-	unsigned long pwfield, pwsize, ptei;
-
-	/*
-	 * We are using 2-level page tables, so we only need to
-	 * setup GDW and PTW appropriately. UDW and MDW will remain 0.
-	 * The default value of GDI/UDI/MDI/PTI is 0xc. It is illegal to
-	 * write values less than 0xc in these fields because the entire
-	 * write will be dropped. As a result of which, we must preserve
-	 * the original reset values and overwrite only what we really want.
-	 */
-
-	pwfield = read_c0_pwfield();
-	/* re-initialize the GDI field */
-	pwfield &= ~MIPS_PWFIELD_GDI_MASK;
-	pwfield |= PGDIR_SHIFT << MIPS_PWFIELD_GDI_SHIFT;
-#ifdef CONFIG_64BIT
-#if defined(CONFIG_48VMBITS) || !defined(CONFIG_PAGE_SIZE_64KB)
-	/* re-initialize the MDI field */
-	pwfield &= ~MIPS_PWFIELD_MDI_MASK;
-	pwfield |= PMD_SHIFT << MIPS_PWFIELD_MDI_SHIFT;
-	/* re-initialize the BDI field */
-	pwfield &= ~MIPS_PWFIELD_BDI_MASK;
-	pwfield |= MIPS_BASE_SHIFT << MIPS_PWFIELD_BDI_SHIFT;
-#endif
-#endif
-	/* re-initialize the PTI field including the even/odd bit */
-	pwfield &= ~MIPS_PWFIELD_PTI_MASK;
-	pwfield |= PAGE_SHIFT << MIPS_PWFIELD_PTI_SHIFT;
-	/* Set the PTEI right shift */
-	ptei = _PAGE_GLOBAL_SHIFT << MIPS_PWFIELD_PTEI_SHIFT;
-	pwfield |= ptei;
-	write_c0_pwfield(pwfield);
-	/* Check whether the PTEI value is supported */
-	back_to_back_c0_hazard();
-	pwfield = read_c0_pwfield();
-	if (((pwfield & MIPS_PWFIELD_PTEI_MASK) << MIPS_PWFIELD_PTEI_SHIFT)
-		!= ptei) {
-		pr_warn("Unsupported PTEI field value: 0x%lx. HTW will not be enabled",
-			ptei);
-		/*
-		 * Drop option to avoid HTW being enabled via another path
-		 * (eg htw_reset())
-		 */
-		current_cpu_data.options2 &= ~MIPS_CPU_HTW;
-		return;
-	}
-
-	pwsize = ilog2(PTRS_PER_PGD) << MIPS_PWSIZE_GDW_SHIFT;
-#ifdef CONFIG_64BIT
-	pwsize |= MIPS_BASE_SIZE;
-	pwsize |= MIPS_PWSIZE_PS;
-#if defined(CONFIG_48VMBITS) || !defined(CONFIG_PAGE_SIZE_64KB)
-	pwsize |= ilog2(PTRS_PER_PMD) << MIPS_PWSIZE_MDW_SHIFT;
-#endif
-#endif
-	pwsize |= ilog2(PTRS_PER_PTE) << MIPS_PWSIZE_PTW_SHIFT;
-	write_c0_pwsize(pwsize);
-
-	/* Make sure everything is set before we enable the HTW */
-	back_to_back_c0_hazard();
-
-	/* Don't enable HTW until PWBASE is set */
-	pr_info("Hardware Page Table Walker is configured\n");
-
-	print_htw_config();
-}
-
 void __cpuinit build_tlb_refill_handler(void)
 {
 	/*
@@ -2405,9 +2218,6 @@ void __cpuinit build_tlb_refill_handler(void)
 		}
 		if (cpu_has_local_ebase)
 			build_r4000_tlb_refill_handler();
-		if (cpu_has_htw)
-			config_htw_params();
-
 	}
 }
 

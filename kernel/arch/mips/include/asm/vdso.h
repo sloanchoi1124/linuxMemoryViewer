@@ -11,9 +11,6 @@
 
 #include <linux/types.h>
 
-void mips_thread_vdso(struct thread_info *ti);
-void arch_release_thread_info(struct thread_info *info);
-void vdso_epc_adjust(struct pt_regs *xcp);
 
 #ifdef CONFIG_32BIT
 struct mips_vdso {

@@ -42,9 +42,10 @@
 #include <linux/types.h>
 #include <linux/security.h>
 #include <linux/string.h>
-#include <linux/list.h>
 #include "multiuser.h"
 
+#define LOOKUP_CASE_INSENSITIVE 0x8000
+#define SDCARDFS_SUPER_MAGIC 0xb550ca10
 /* the file system name */
 #define SDCARDFS_NAME "sdcardfs"
 
@@ -67,14 +68,14 @@
 #define AID_SDCARD_ALL    1035	/* access all users external storage */
 
 #define AID_PACKAGE_INFO  1027
-
+/*
 #define fix_derived_permission(x)	\
 	do {						\
 		(x)->i_uid = SDCARDFS_I(x)->d_uid;	\
-		(x)->i_gid = get_gid(SDCARDFS_I(x));	\
-		(x)->i_mode = ((x)->i_mode & S_IFMT) | get_mode(SDCARDFS_I(x));\
+		(x)->i_gid = SDCARDFS_I(x)->d_gid;	\
+		(x)->i_mode = ((x)->i_mode & S_IFMT) | SDCARDFS_I(x)->d_mode;\
 	} while (0)
-
+*/
 
 /* OVERRIDE_CRED() and REVERT_CRED()
  * 	OVERRID_CRED()
@@ -101,27 +102,39 @@
 		(int)current->cred->fsuid, 		\
 		(int)current->cred->fsgid);
 
-/* Android 5.0 support */
+/* Android 4.4 support */
 
 /* Permission mode for a specific node. Controls how file permissions
  * are derived for children nodes. */
 typedef enum {
-    /* Nothing special; this node should just inherit from its parent. */
-    PERM_INHERIT,
-    /* This node is one level above a normal root; used for legacy layouts
-     * which use the first level to represent user_id. */
-    PERM_PRE_ROOT,
-    /* This node is "/" */
-    PERM_ROOT,
-    /* This node is "/Android" */
-    PERM_ANDROID,
-    /* This node is "/Android/data" */
-    PERM_ANDROID_DATA,
-    /* This node is "/Android/obb" */
-    PERM_ANDROID_OBB,
-    /* This node is "/Android/media" */
-    PERM_ANDROID_MEDIA,
+	/* Nothing special; this node should just inherit from its parent. */
+	PERM_INHERIT,
+	/* This node is one level above a normal root; used for legacy layouts
+	 * which use the first level to represent user_id. */
+	PERM_LEGACY_PRE_ROOT,
+	/* This node is "/" */
+	PERM_ROOT,
+	/* This node is "/Android" */
+	PERM_ANDROID,
+	/* This node is "/Android/data" */
+	PERM_ANDROID_DATA,
+	/* This node is "/Android/obb" */
+	PERM_ANDROID_OBB,
+	/* This node is "/Android/user" */
+	PERM_ANDROID_USER,
 } perm_t;
+
+/* Permissions structure to derive */
+typedef enum {
+	DERIVE_NONE,
+	DERIVE_LEGACY,
+	DERIVE_UNIFIED,
+} derive_t;
+
+typedef enum {
+	LOWER_FS_EXT4,
+	LOWER_FS_FAT,
+} lower_fs_t;
 
 struct sdcardfs_sb_info;
 struct sdcardfs_mount_options;
@@ -149,11 +162,9 @@ extern void sdcardfs_destroy_dentry_cache(void);
 extern int new_dentry_private_data(struct dentry *dentry);
 extern void free_dentry_private_data(struct dentry *dentry);
 extern struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
-				unsigned int flags);
-extern struct inode *sdcardfs_iget(struct super_block *sb,
-				 struct inode *lower_inode, userid_t id);
+				    unsigned int flags);
 extern int sdcardfs_interpose(struct dentry *dentry, struct super_block *sb,
-			    struct path *lower_path, userid_t id);
+			    struct path *lower_path);
 
 /* file private data */
 struct sdcardfs_file_info {
@@ -164,15 +175,18 @@ struct sdcardfs_file_info {
 /* sdcardfs inode data in memory */
 struct sdcardfs_inode_info {
 	struct inode *lower_inode;
-	/* state derived based on current position in hierachy */
+	/* state derived based on current position in hierachy
+	 * caution: d_mode does not include file types
+	 */
 	perm_t perm;
 	userid_t userid;
 	uid_t d_uid;
-	bool under_android;
+	gid_t d_gid;
+	mode_t d_mode;
 
+	bool under_android;
 	struct inode vfs_inode;
 };
-
 
 /* sdcardfs dentry data in memory */
 struct sdcardfs_dentry_info {
@@ -184,16 +198,17 @@ struct sdcardfs_dentry_info {
 struct sdcardfs_mount_options {
 	uid_t fs_low_uid;
 	gid_t fs_low_gid;
-	userid_t fs_user_id;
-	gid_t gid;
-	mode_t mask;
-	bool multiuser;
+	gid_t write_gid;
+	gid_t m_gid;
+	int split_perms;
+	derive_t derive;
+	lower_fs_t lower_fs;
 	unsigned int reserved_mb;
+	mode_t mask;
 };
 
 /* sdcardfs super-block data in memory */
 struct sdcardfs_sb_info {
-	struct super_block *sb;
 	struct super_block *lower_sb;
 	/* derived perm policy : some of options have been added
 	 * to sdcardfs_mount_options (Android 4.4 support) */
@@ -202,7 +217,6 @@ struct sdcardfs_sb_info {
 	char *obbpath_s;
 	struct path obbpath;
 	void *pkgl_id;
-	struct list_head list;
 };
 
 /*
@@ -321,44 +335,6 @@ static inline void sdcardfs_put_reset_##pname(const struct dentry *dent) \
 SDCARDFS_DENT_FUNC(lower_path)
 SDCARDFS_DENT_FUNC(orig_path)
 
-static inline int get_gid(struct sdcardfs_inode_info *info) {
-	struct sdcardfs_sb_info *sb_info = SDCARDFS_SB(info->vfs_inode.i_sb);
-	if (sb_info->options.gid == AID_SDCARD_RW) {
-		/* As an optimization, certain trusted system components only run
-		 * as owner but operate across all users. Since we're now handing
-		 * out the sdcard_rw GID only to trusted apps, we're okay relaxing
-		 * the user boundary enforcement for the default view. The UIDs
-		 * assigned to app directories are still multiuser aware. */
-		return AID_SDCARD_RW;
-	} else {
-		return multiuser_get_uid(info->userid, sb_info->options.gid);
-	}
-}
-static inline int get_mode(struct sdcardfs_inode_info *info) {
-	int owner_mode;
-	int filtered_mode;
-	struct sdcardfs_sb_info *sb_info = SDCARDFS_SB(info->vfs_inode.i_sb);
-	int visible_mode = 0775 & ~sb_info->options.mask;
-
-	if (info->perm == PERM_PRE_ROOT) {
-		/* Top of multi-user view should always be visible to ensure
-		* secondary users can traverse inside. */
-		visible_mode = 0711;
-	} else if (info->under_android) {
-		/* Block "other" access to Android directories, since only apps
-		* belonging to a specific user should be in there; we still
-		* leave +x open for the default view. */
-		if (sb_info->options.gid == AID_SDCARD_RW) {
-			visible_mode = visible_mode & ~0006;
-		} else {
-			visible_mode = visible_mode & ~0007;
-		}
-	}
-	owner_mode = info->lower_inode->i_mode & 0700;
-	filtered_mode = visible_mode & (owner_mode | (owner_mode >> 3) | (owner_mode >> 6));
-	return filtered_mode;
-}
-
 static inline int has_graft_path(const struct dentry *dent)
 {
 	int ret = 0;
@@ -392,24 +368,22 @@ static inline void sdcardfs_put_real_lower(const struct dentry *dent,
 		sdcardfs_put_lower_path(dent, real_lower);
 }
 
-extern struct mutex sdcardfs_super_list_lock;
-extern struct list_head sdcardfs_super_list;
-
 /* for packagelist.c */
+extern int get_caller_has_rw_locked(void *pkgl_id, derive_t derive);
 extern appid_t get_appid(void *pkgl_id, const char *app_name);
-extern int check_caller_access_to_name(struct inode *parent_node, const char* name);
+extern int check_caller_access_to_name(struct inode *parent_node, const char* name,
+                                        derive_t derive, int w_ok, int has_rw);
 extern int open_flags_to_access_mode(int open_flags);
+extern void * packagelist_create(gid_t write_gid);
+extern void packagelist_destroy(void *pkgl_id);
 extern int packagelist_init(void);
 extern void packagelist_exit(void);
 
 /* for derived_perm.c */
 extern void setup_derived_state(struct inode *inode, perm_t perm,
-			userid_t userid, uid_t uid, bool under_android);
+			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
 extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
-extern void get_derived_permission_new(struct dentry *parent, struct dentry *dentry, struct dentry *newdentry);
-extern void get_derive_permissions_recursive(struct dentry *parent);
-
-extern void update_derived_permission_lock(struct dentry *dentry);
+extern void update_derived_permission(struct dentry *dentry);
 extern int need_graft_path(struct dentry *dentry);
 extern int is_base_obbpath(struct dentry *dentry);
 extern int is_obbpath_invalid(struct dentry *dentry);
@@ -433,22 +407,27 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 {
 	int err;
 	struct dentry *dent;
+	struct path path;
 	struct iattr attrs;
-	struct path parent;
 
-	dent = kern_path_locked(path_s, &parent);
+	dent = kern_path_create(AT_FDCWD, path_s, &path, LOOKUP_DIRECTORY);
+
 	if (IS_ERR(dent)) {
 		err = PTR_ERR(dent);
 		if (err == -EEXIST)
 			err = 0;
-		goto out_unlock;
+		return err;
 	}
 
-	err = vfs_mkdir(parent.dentry->d_inode, dent, mode);
+	err = mnt_want_write(path.mnt);
+	if (err)
+		goto out;
+
+	err = vfs_mkdir(path.dentry->d_inode, dent, mode);
 	if (err) {
 		if (err == -EEXIST)
 			err = 0;
-		goto out_dput;
+		goto out_drop;
 	}
 
 	attrs.ia_uid = uid;
@@ -458,14 +437,55 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	notify_change(dent, &attrs);
 	mutex_unlock(&dent->d_inode->i_mutex);
 
-out_dput:
-	dput(dent);
+out_drop:
+	mnt_drop_write(path.mnt);
 
-out_unlock:
-	/* parent dentry locked by lookup_create */
-	mutex_unlock(&parent.dentry->d_inode->i_mutex);
-	path_put(&parent);
+out:
+	dput(dent);
+	/* parent dentry locked by kern_path_create */
+	mutex_unlock(&path.dentry->d_inode->i_mutex);
+	path_put(&path);
 	return err;
+}
+
+static inline void fix_derived_permission(struct inode* x)
+{
+    struct sdcardfs_sb_info *sbi = SDCARDFS_SB(x->i_sb);
+    int visible_mode = 0775 & ~(sbi->options.mask);
+    struct inode *current_lower_inode = sdcardfs_lower_inode(x);
+    struct sdcardfs_inode_info *info = SDCARDFS_I(x);
+    int owner_mode,filtered_mode;
+    x->i_uid = SDCARDFS_I(x)->d_uid;
+    x->i_gid = SDCARDFS_I(x)->d_gid;
+
+    if (sbi->options.m_gid == AID_SDCARD_RW) {
+        /* As an optimization, certain trusted system components only run
+         * as owner but operate across all users. Since we're now handing
+         * out the sdcard_rw GID only to trusted apps, we're okay relaxing
+         * the user boundary enforcement for the default view. The UIDs
+         * assigned to app directories are still multiuser aware. */
+        x->i_gid = AID_SDCARD_RW;
+    } else {
+        x->i_gid = multiuser_get_uid(info->userid, sbi->options.m_gid);
+    }
+
+    if (SDCARDFS_I(x)->perm == PERM_LEGACY_PRE_ROOT) {
+        /* Top of multi-user view should always be visible to ensure
+         * secondary users can traverse inside. */
+        visible_mode = 0711;
+    } else if (SDCARDFS_I(x)->under_android) {
+        /* Block "other" access to Android directories, since only apps
+         * belonging to a specific user should be in there; we still
+         * leave +x open for the default view. */
+        if (sbi->options.m_gid == AID_SDCARD_RW) {
+            visible_mode = visible_mode & ~0006;
+        } else {
+            visible_mode = visible_mode & ~0007;
+        }
+    }
+    owner_mode = current_lower_inode->i_mode & 0700;
+    filtered_mode = visible_mode & (owner_mode | (owner_mode >> 3) | (owner_mode >> 6));
+    x->i_mode = (x->i_mode & S_IFMT) | filtered_mode;
 }
 
 /*
@@ -513,18 +533,4 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 		return 1;
 }
 
-/* Copies attrs and maintains sdcardfs managed attrs */
-static inline void sdcardfs_copy_and_fix_attrs(struct inode *dest, const struct inode *src)
-{
-	dest->i_mode = (src->i_mode  & S_IFMT) | get_mode(SDCARDFS_I(dest));
-	dest->i_uid = SDCARDFS_I(dest)->d_uid;
-	dest->i_gid = get_gid(SDCARDFS_I(dest));
-	dest->i_rdev = src->i_rdev;
-	dest->i_atime = src->i_atime;
-	dest->i_mtime = src->i_mtime;
-	dest->i_ctime = src->i_ctime;
-	dest->i_blkbits = src->i_blkbits;
-	dest->i_flags = src->i_flags;
-	set_nlink(dest, src->i_nlink);
-}
 #endif	/* not _SDCARDFS_H_ */

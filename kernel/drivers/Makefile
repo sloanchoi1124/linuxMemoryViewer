@@ -8,6 +8,8 @@
 obj-y				+= irqchip/
 obj-y				+= bus/
 
+obj-$(CONFIG_GENERIC_PHY)	+= phy/
+
 # GPIO must come after pinctrl as gpios may need to mux pins etc
 obj-y				+= pinctrl/
 obj-y				+= gpio/
@@ -17,6 +19,7 @@ obj-$(CONFIG_PARISC)		+= parisc/
 obj-$(CONFIG_RAPIDIO)		+= rapidio/
 obj-y				+= video/
 obj-y				+= idle/
+obj-y				+= soc/
 
 # IPMI must come before ACPI in order to provide IPMI opregion support
 obj-$(CONFIG_IPMI_HANDLER)	+= char/ipmi/
@@ -55,7 +58,7 @@ obj-$(CONFIG_FB_I810)           += video/i810/
 obj-$(CONFIG_FB_INTEL)          += video/intelfb/
 
 obj-$(CONFIG_PARPORT)		+= parport/
-obj-y				+= base/ block/ misc/ mfd/ nfc/
+obj-y				+= base/ block/ misc/ mfd/ nfc/ soc/
 obj-$(CONFIG_NUBUS)		+= nubus/
 obj-y				+= macintosh/
 obj-$(CONFIG_IDE)		+= ide/
@@ -64,6 +67,8 @@ obj-$(CONFIG_ATA)		+= ata/
 obj-$(CONFIG_TARGET_CORE)	+= target/
 obj-$(CONFIG_MTD)		+= mtd/
 obj-$(CONFIG_SPI)		+= spi/
+obj-$(CONFIG_SPMI)		+= spmi/
+obj-$(CONFIG_SLIMBUS)		+= slimbus/
 obj-y				+= hsi/
 obj-y				+= net/
 obj-$(CONFIG_ATM)		+= atm/
@@ -153,4 +158,24 @@ obj-$(CONFIG_IIO)		+= iio/
 obj-$(CONFIG_VME_BUS)		+= vme/
 obj-$(CONFIG_IPACK_BUS)		+= ipack/
 obj-$(CONFIG_NTB)		+= ntb/
-obj-$(CONFIG_ANDROID)		+= android/
+
+#MobiCore
+obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
+
+obj-$(CONFIG_CORESIGHT)		+= coresight/
+obj-$(CONFIG_ESOC)		+= esoc/
+
+obj-$(CONFIG_BIF)		+= bif/
+obj-$(CONFIG_SENSORS)		+= sensors/
+obj-$(CONFIG_SENSORS_SSC)	+= sensors/
+obj-$(CONFIG_HUAWEI_HW_DEV_DCT) += devdetect/
+obj-$(CONFIG_HUAWEI_FACTORY_INFO) += hw_fac_info/
+
+obj-$(CONFIG_HUAWEI_GOLDENEYE) += goldeneye/
+obj-y				+= huawei/
+
+obj-$(CONFIG_SRECORDER)     += srecorder/
+
+obj-$(CONFIG_HUAWEI_DRIVERS)    += huawei_platform/
+obj-y += hwusb/
+obj-$(CONFIG_HUAWEI_DSM)    += dsm/

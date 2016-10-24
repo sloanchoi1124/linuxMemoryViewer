@@ -26,9 +26,6 @@
 #include <asm/cputype.h>
 #include <asm/smp_plat.h>
 
-extern void secondary_holding_pen(void);
-volatile unsigned long secondary_holding_pen_release = INVALID_HWID;
-
 static phys_addr_t cpu_release_addr[NR_CPUS];
 
 /*
@@ -71,7 +68,16 @@ static int smp_spin_table_cpu_prepare(unsigned int cpu)
 		return -ENODEV;
 
 	release_addr = __va(cpu_release_addr[cpu]);
-	release_addr[0] = (void *)__pa(secondary_holding_pen);
+
+	/*
+	 * We write the release address as LE regardless of the native
+	 * endianess of the kernel. Therefore, any boot-loaders that
+	 * read this address need to convert this address to the
+	 * boot-loader's endianess before jumping. This is mandated by
+	 * the boot protocol.
+	 */
+	release_addr[0] = (void *) cpu_to_le64(__pa(secondary_holding_pen));
+
 	__flush_dcache_area(release_addr, sizeof(release_addr[0]));
 
 	/*
@@ -97,9 +103,10 @@ static int smp_spin_table_cpu_boot(unsigned int cpu)
 	return 0;
 }
 
-const struct cpu_operations smp_spin_table_ops = {
+static const struct cpu_operations smp_spin_table_ops = {
 	.name		= "spin-table",
 	.cpu_init	= smp_spin_table_cpu_init,
 	.cpu_prepare	= smp_spin_table_cpu_prepare,
 	.cpu_boot	= smp_spin_table_cpu_boot,
 };
+CPU_METHOD_OF_DECLARE(spin_table, &smp_spin_table_ops);

@@ -26,7 +26,7 @@
 
 #include <clocksource/arm_arch_timer.h>
 
-static inline void arch_timer_reg_write(int access, int reg, u32 val)
+static inline void arch_timer_reg_write_cp15(int access, int reg, u32 val)
 {
 	if (access == ARCH_TIMER_PHYS_ACCESS) {
 		switch (reg) {
@@ -57,7 +57,7 @@ static inline void arch_timer_reg_write(int access, int reg, u32 val)
 	isb();
 }
 
-static inline u32 arch_timer_reg_read(int access, int reg)
+static inline u32 arch_timer_reg_read_cp15(int access, int reg)
 {
 	u32 val;
 
@@ -109,23 +109,6 @@ static inline void arch_timer_set_cntkctl(u32 cntkctl)
 	asm volatile("msr	cntkctl_el1, %0" : : "r" (cntkctl));
 }
 
-static inline void __cpuinit arch_counter_set_user_access(void)
-{
-	u32 cntkctl = arch_timer_get_cntkctl();
-
-	/* Disable user access to the timers and the physical counter */
-	/* Also disable virtual event stream */
-	cntkctl &= ~(ARCH_TIMER_USR_PT_ACCESS_EN
-			| ARCH_TIMER_USR_VT_ACCESS_EN
-			| ARCH_TIMER_VIRT_EVT_EN
-			| ARCH_TIMER_USR_PCT_ACCESS_EN);
-
-	/* Enable user access to the virtual counter */
-	cntkctl |= ARCH_TIMER_USR_VCT_ACCESS_EN;
-
-	arch_timer_set_cntkctl(cntkctl);
-}
-
 static inline void arch_timer_evtstrm_enable(int divider)
 {
 	u32 cntkctl = arch_timer_get_cntkctl();
@@ -140,12 +123,22 @@ static inline void arch_timer_evtstrm_enable(int divider)
 #endif
 }
 
-static inline u64 arch_counter_get_cntvct(void)
+static inline u64 arch_counter_get_cntvct_cp15(void)
 {
 	u64 cval;
 
 	isb();
 	asm volatile("mrs %0, cntvct_el0" : "=r" (cval));
+
+	return cval;
+}
+
+static inline u64 arch_counter_get_cntpct_cp15(void)
+{
+	u64 cval;
+
+	isb();
+	asm volatile("mrs %0, cntpct_el0" : "=r" (cval));
 
 	return cval;
 }

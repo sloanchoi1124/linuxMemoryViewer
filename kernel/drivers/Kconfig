@@ -50,7 +50,11 @@ source "drivers/char/Kconfig"
 
 source "drivers/i2c/Kconfig"
 
+source "drivers/slimbus/Kconfig"
+
 source "drivers/spi/Kconfig"
+
+source "drivers/spmi/Kconfig"
 
 source "drivers/ssbi/Kconfig"
 
@@ -110,6 +114,8 @@ source "drivers/edac/Kconfig"
 
 source "drivers/rtc/Kconfig"
 
+source "drivers/esoc/Kconfig"
+
 source "drivers/dma/Kconfig"
 
 source "drivers/dca/Kconfig"
@@ -166,8 +172,31 @@ source "drivers/irqchip/Kconfig"
 
 source "drivers/ipack/Kconfig"
 
+source "drivers/gud/Kconfig"
+
 source "drivers/reset/Kconfig"
 
-source "drivers/android/Kconfig"
+source "drivers/coresight/Kconfig"
 
+source "drivers/bif/Kconfig"
+
+source "drivers/sensors/Kconfig"
+
+source "drivers/phy/Kconfig"
+
+source "drivers/soc/Kconfig"
+
+source "drivers/devdetect/Kconfig"
+source "drivers/hw_fac_info/Kconfig"
+
+source "drivers/huawei/Kconfig"
+
+source "drivers/firmware/Kconfig"
+
+source "drivers/goldeneye/Kconfig"
+
+source "drivers/srecorder/Kconfig"
+source "drivers/huawei_platform/Kconfig"
+source "drivers/hwusb/Kconfig"
+source "drivers/dsm/Kconfig"
 endmenu

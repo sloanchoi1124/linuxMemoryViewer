@@ -51,7 +51,16 @@ int pmd_huge(pmd_t pmd)
 
 int pud_huge(pud_t pud)
 {
+#ifndef __PAGETABLE_PMD_FOLDED
 	return !(pud_val(pud) & PUD_TABLE_BIT);
+#else
+	return 0;
+#endif
+}
+
+int pmd_huge_support(void)
+{
+	return 1;
 }
 
 static __init int setup_hugepagesz(char *opt)

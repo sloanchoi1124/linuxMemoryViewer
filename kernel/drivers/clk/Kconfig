@@ -42,7 +42,7 @@ config COMMON_CLK_WM831X
 
 config COMMON_CLK_VERSATILE
 	bool "Clock driver for ARM Reference designs"
-	depends on ARCH_INTEGRATOR || ARCH_REALVIEW || ARCH_VEXPRESS || ARCH_LIONHEAD
+	depends on ARCH_INTEGRATOR || ARCH_REALVIEW || ARCH_VEXPRESS
 	---help---
           Supports clocking on ARM Reference designs:
 	  - Integrator/AP and Integrator/CP
@@ -84,3 +84,4 @@ config COMMON_CLK_AXI_CLKGEN
 endmenu
 
 source "drivers/clk/mvebu/Kconfig"
+source "drivers/clk/qcom/Kconfig"

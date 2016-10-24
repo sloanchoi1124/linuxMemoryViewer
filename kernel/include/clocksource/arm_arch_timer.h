@@ -28,6 +28,8 @@
 
 #define ARCH_TIMER_PHYS_ACCESS		0
 #define ARCH_TIMER_VIRT_ACCESS		1
+#define ARCH_TIMER_MEM_PHYS_ACCESS	2
+#define ARCH_TIMER_MEM_VIRT_ACCESS	3
 
 #define ARCH_TIMER_USR_PCT_ACCESS_EN	(1 << 0) /* physical counter */
 #define ARCH_TIMER_USR_VCT_ACCESS_EN	(1 << 1) /* virtual counter */
@@ -42,8 +44,10 @@
 #ifdef CONFIG_ARM_ARCH_TIMER
 
 extern u32 arch_timer_get_rate(void);
-extern u64 arch_timer_read_counter(void);
+extern u64 (*arch_timer_read_counter)(void);
 extern struct timecounter *arch_timer_get_timecounter(void);
+extern u64 arch_counter_get_cntpct(void);
+extern u64 arch_counter_get_cntvct(void);
 
 #else
 
@@ -61,6 +65,10 @@ static inline struct timecounter *arch_timer_get_timecounter(void)
 {
 	return NULL;
 }
+
+static inline u64 arch_counter_get_cntpct(void) { return 0; }
+
+static inline u64 arch_counter_get_cntvct(void) { return 0; }
 
 #endif
 

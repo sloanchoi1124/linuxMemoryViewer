@@ -391,8 +391,18 @@
  *	%NL80211_ATTR_SSID attribute, and can optionally specify the association
  *	IEs in %NL80211_ATTR_IE, %NL80211_ATTR_AUTH_TYPE, %NL80211_ATTR_USE_MFP,
  *	%NL80211_ATTR_MAC, %NL80211_ATTR_WIPHY_FREQ, %NL80211_ATTR_CONTROL_PORT,
- *	%NL80211_ATTR_CONTROL_PORT_ETHERTYPE and
- *	%NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT.
+ *	%NL80211_ATTR_CONTROL_PORT_ETHERTYPE,
+ *	%NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT, %NL80211_ATTR_MAC_HINT, and
+ *	%NL80211_ATTR_WIPHY_FREQ_HINT.
+ *	If included, %NL80211_ATTR_MAC and %NL80211_ATTR_WIPHY_FREQ are
+ *	restrictions on BSS selection, i.e., they effectively prevent roaming
+ *	within the ESS. %NL80211_ATTR_MAC_HINT and %NL80211_ATTR_WIPHY_FREQ_HINT
+ *	can be included to provide a recommendation of the initial BSS while
+ *	allowing the driver to roam to other BSSes within the ESS and also to
+ *	ignore this recommendation if the indicated BSS is not ideal. Only one
+ *	set of BSSID,frequency parameters is used (i.e., either the enforcing
+ *	%NL80211_ATTR_MAC,%NL80211_ATTR_WIPHY_FREQ or the less strict
+ *	%NL80211_ATTR_MAC_HINT and %NL80211_ATTR_WIPHY_FREQ_HINT).
  *	Background scan period can optionally be
  *	specified in %NL80211_ATTR_BG_SCAN_PERIOD,
  *	if not specified default background scan configuration
@@ -668,6 +678,32 @@
  *	(&struct nl80211_vendor_cmd_info) of the supported vendor commands.
  *	This may also be sent as an event with the same attributes.
  *
+ * @NL80211_CMD_SET_QOS_MAP: Set Interworking QoS mapping for IP DSCP values.
+ *	The QoS mapping information is included in %NL80211_ATTR_QOS_MAP. If
+ *	that attribute is not included, QoS mapping is disabled. Since this
+ *	QoS mapping is relevant for IP packets, it is only valid during an
+ *	association. This is cleared on disassociation and AP restart.
+ *
+ * @NL80211_CMD_AUTHORIZATION_EVENT: Indicates that the device offloaded
+ *	the establishment of temporal keys for an RSN connection.  This is
+ *	used as part of key managment offload, where a device operating as a
+ *	station is capable of doing the exchange necessary to establish
+ *	temporal keys during initial RSN connection or after roaming.  This
+ *	event might also be sent after the device handles a PTK rekeying
+ *	operation.  The supplicant should expect to do the exchange itself,
+ *	by preparing to process the EAPOL-Key frames, until
+ *	NL80211_CMD_AUTHORIZATION_EVENT is sent with success status.  The
+ *	NL80211_ATTR_AUTHORIZATION_STATUS attribute provides the status of
+ *	the offload and NL80211_KEY_REPLAY_CTR provides the Key Replay
+ *	Counter value last used in a valid EAPOL-Key frame.
+ *
+ * @NL80211_CMD_KEY_MGMT_SET_PMK: Used to pass the PMK to the device for
+ *	key management offload.  This will be used in the case of key
+ *	management offload on an already established PMKSA.  The PMK is passed
+ *	in NL80211_ATTR_PMK once it is known by the supplicant.  If connection
+ *	is FT (802.11r) enabled with 802.1X, then the second 256 bits of the
+ *	MSK is passed instead of the PMK.
+ *
  * @NL80211_CMD_MAX: highest used command number
  * @__NL80211_CMD_AFTER_LAST: internal use
  */
@@ -836,6 +872,11 @@ enum nl80211_commands {
 	NL80211_CMD_CHANNEL_SWITCH,
 
 	NL80211_CMD_VENDOR,
+
+	NL80211_CMD_SET_QOS_MAP,
+
+	NL80211_CMD_AUTHORIZATION_EVENT,
+	NL80211_CMD_KEY_MGMT_SET_PMK,
 
 	/* add new commands above here */
 
@@ -1517,12 +1558,21 @@ enum nl80211_commands {
  * @NL80211_ATTR_TDLS_PEER_CAPABILITY: flags for TDLS peer capabilities, u32.
  *	As specified in the &enum nl80211_tdls_peer_capability.
  *
- * @NL80211_ATTR_IFACE_SOCKET_OWNER: flag attribute, if set during interface
- *	creation then the new interface will be owned by the netlink socket
- *	that created it and will be destroyed when the socket is closed.
- *	If set during scheduled scan start then the new scan req will be
- *	owned by the netlink socket that created it and the scheduled scan will
- *	be stopped when the socket is closed.
+ * @NL80211_ATTR_AUTHORIZATION_STATUS: Status of key management offload.
+ * @NL80211_ATTR_KEY_REPLAY_CTR: Key Replay Counter value last used in a
+ *	valid EAPOL-Key frame.
+ * @NL80211_ATTR_PSK: The Preshared Key to be used for the connection.
+ * @NL80211_ATTR_OFFLOAD_KEY_MGMT: Requests that device handle establishment
+ *	of temporal keys if possible.
+ * @NL80211_ATTR_KEY_MGMT_OFFLOAD_SUPPORT: Supported types of device key
+ *	management offload.
+ * @NL80211_ATTR_KEY_DERIVE_OFFLOAD_SUPPORT: Supported types of device key
+ *	derivation used as part of key management offload.
+ * @NL80211_ATTR_PMK: The Pairwise Master Key to be used for the
+ *	connection.
+ * @NL80211_ATTR_PMK_LEN: The length of the PMK.
+ * @NL80211_ATTR_PTK_KCK: Pairwise Transient Key, Key Confirmation Key.
+ * @NL80211_ATTR_PTK_KEK: Pairwise Transient Key, Key Encryption Key.
  *
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -1860,7 +1910,16 @@ enum nl80211_attrs {
 
 	NL80211_ATTR_TDLS_PEER_CAPABILITY,
 
-	NL80211_ATTR_IFACE_SOCKET_OWNER,
+	NL80211_ATTR_AUTHORIZATION_STATUS,
+	NL80211_ATTR_KEY_REPLAY_CTR,
+	NL80211_ATTR_PSK,
+	NL80211_ATTR_OFFLOAD_KEY_MGMT,
+	NL80211_ATTR_KEY_MGMT_OFFLOAD_SUPPORT,
+	NL80211_ATTR_KEY_DERIVE_OFFLOAD_SUPPORT,
+	NL80211_ATTR_PMK,
+	NL80211_ATTR_PMK_LEN,
+	NL80211_ATTR_PTK_KCK,
+	NL80211_ATTR_PTK_KEK,
 
 	/* add attributes here, update the policy in nl80211.c */
 
@@ -2368,6 +2427,34 @@ enum nl80211_reg_type {
 	NL80211_REGDOM_TYPE_WORLD,
 	NL80211_REGDOM_TYPE_CUSTOM_WORLD,
 	NL80211_REGDOM_TYPE_INTERSECTION,
+};
+
+/**
+ * enum nl80211_country_ie_pref - country IE processing preferences
+ *
+ * enumerates the different preferences a 802.11 card can advertize
+ * for parsing the country IEs. As per the current implementation
+ * country IEs are only used derive the apha2, the information
+ * for power settings that comes with the country IE is ignored
+ * and we use the power settings from regdb.
+ *
+ * @NL80211_COUNTRY_IE_FOLLOW_CORE - This is the default behaviour.
+ *	It allows the core to update channel flags according to the
+ *	ISO3166-alpha2 in the country IE. The applied power is -
+ *	MIN(power specified by custom domain, power obtained from regdb)
+ * @NL80211_COUNTRY_IE_FOLLOW_POWER - for devices that have a
+ *	preference that even though they may have programmed their own
+ *	custom power setting prior to wiphy registration, they want
+ *	to ensure their channel power settings are updated for this
+ *	connection with the power settings derived from alpha2 of the
+ *	country IE.
+ * @NL80211_COUNTRY_IE_IGNORE_CORE - for devices that have a preference to
+ *	to ignore all country IE information processed by the core.
+ */
+enum nl80211_country_ie_pref {
+	NL80211_COUNTRY_IE_FOLLOW_CORE,
+	NL80211_COUNTRY_IE_FOLLOW_POWER,
+	NL80211_COUNTRY_IE_IGNORE_CORE,
 };
 
 /**
@@ -2888,14 +2975,20 @@ enum nl80211_chan_width {
  * @NL80211_BSS_BSSID: BSSID of the BSS (6 octets)
  * @NL80211_BSS_FREQUENCY: frequency in MHz (u32)
  * @NL80211_BSS_TSF: TSF of the received probe response/beacon (u64)
+ *	(if @NL80211_BSS_PRESP_DATA is present then this is known to be
+ *	from a probe response, otherwise it may be from the same beacon
+ *	that the NL80211_BSS_BEACON_TSF will be from)
  * @NL80211_BSS_BEACON_INTERVAL: beacon interval of the (I)BSS (u16)
  * @NL80211_BSS_CAPABILITY: capability field (CPU order, u16)
  * @NL80211_BSS_INFORMATION_ELEMENTS: binary attribute containing the
  *	raw information elements from the probe response/beacon (bin);
- *	if the %NL80211_BSS_BEACON_IES attribute is present, the IEs here are
- *	from a Probe Response frame; otherwise they are from a Beacon frame.
+ *	if the %NL80211_BSS_BEACON_IES attribute is present and the data is
+ *	different then the IEs here are from a Probe Response frame; otherwise
+ *	they are from a Beacon frame.
  *	However, if the driver does not indicate the source of the IEs, these
  *	IEs may be from either frame subtype.
+ *	If present, the @NL80211_BSS_PRESP_DATA attribute indicates that the
+ *	data here is known to be from a probe response, without any heuristics.
  * @NL80211_BSS_SIGNAL_MBM: signal strength of probe response/beacon
  *	in mBm (100 * dBm) (s32)
  * @NL80211_BSS_SIGNAL_UNSPEC: signal strength of the probe response/beacon
@@ -2905,6 +2998,12 @@ enum nl80211_chan_width {
  * @NL80211_BSS_BEACON_IES: binary attribute containing the raw information
  *	elements from a Beacon frame (bin); not present if no Beacon frame has
  *	yet been received
+ * @NL80211_BSS_CHAN_WIDTH: channel width of the control channel
+ *	(u32, enum nl80211_bss_scan_width)
+ * @NL80211_BSS_BEACON_TSF: TSF of the last received beacon (u64)
+ *	(not present if no beacon frame has been received yet)
+ * @NL80211_BSS_PRESP_DATA: the data in @NL80211_BSS_INFORMATION_ELEMENTS and
+ *	@NL80211_BSS_TSF is known to be from a probe response (flag attribute)
  * @__NL80211_BSS_AFTER_LAST: internal
  * @NL80211_BSS_MAX: highest BSS attribute
  */
@@ -2921,6 +3020,9 @@ enum nl80211_bss {
 	NL80211_BSS_STATUS,
 	NL80211_BSS_SEEN_MS_AGO,
 	NL80211_BSS_BEACON_IES,
+	NL80211_BSS_CHAN_WIDTH,
+	NL80211_BSS_BEACON_TSF,
+	NL80211_BSS_PRESP_DATA,
 
 	/* keep last */
 	__NL80211_BSS_AFTER_LAST,
@@ -3697,6 +3799,9 @@ enum nl80211_ap_sme_features {
  *	Peering Management entity which may be implemented by registering for
  *	beacons or NL80211_CMD_NEW_PEER_CANDIDATE events. The mesh beacon is
  *	still generated by the driver.
+ * @NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE: This driver supports dynamic
+ *	channel bandwidth change (e.g., HT 20 <-> 40 MHz channel) during the
+ *	lifetime of a BSS.
  */
 enum nl80211_feature_flags {
 	NL80211_FEATURE_SK_TX_STATUS			= 1 << 0,
@@ -3716,6 +3821,7 @@ enum nl80211_feature_flags {
 	NL80211_FEATURE_ADVERTISE_CHAN_LIMITS		= 1 << 14,
 	NL80211_FEATURE_FULL_AP_CLIENT_STATE		= 1 << 15,
 	NL80211_FEATURE_USERSPACE_MPM			= 1 << 16,
+	NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE	= 1 << 18,
 };
 
 /**
@@ -3880,6 +3986,90 @@ enum nl80211_crit_proto_id {
 struct nl80211_vendor_cmd_info {
 	__u32 vendor_id;
 	__u32 subcmd;
+};
+
+/**
+ * enum nl80211_tdls_peer_capability - TDLS peer flags.
+ *
+ * Used by tdls_mgmt() to determine which conditional elements need
+ * to be added to TDLS Setup frames.
+ *
+ * @NL80211_TDLS_PEER_HT: TDLS peer is HT capable.
+ * @NL80211_TDLS_PEER_VHT: TDLS peer is VHT capable.
+ * @NL80211_TDLS_PEER_WMM: TDLS peer is WMM capable.
+ */
+enum nl80211_tdls_peer_capability {
+	NL80211_TDLS_PEER_HT = 1<<0,
+	NL80211_TDLS_PEER_VHT = 1<<1,
+	NL80211_TDLS_PEER_WMM = 1<<2,
+};
+
+#define NL80211_KEY_LEN_PSK		32
+#define NL80211_KEY_LEN_PMK		32
+#define NL80211_KEY_REPLAY_CTR_LEN	8
+#define NL80211_KEY_LEN_PTK_KCK		16
+#define NL80211_KEY_LEN_PTK_KEK		16
+
+/**
+ * enum nl80211_key_mgmt_offload_support - key management offload types
+ *
+ * Supported types of device key management offload.  Allows device
+ * to advertise types of connections where it can offload establishment
+ * of temporal keys during initial RSN connection or after roaming.
+ *
+ * @NL80211_KEY_MGMT_OFFLOAD_SUPPORT_PSK: WPA/WPA2 PSK key management.
+ *	The NL80211_ATTR_PSK attribute is passed in NL80211_CMD_CONNECT.
+ * @NL80211_KEY_MGMT_OFFLOAD_SUPPORT_FT_PSK: 802.11r (FT) PSK key
+ *	management.  The NL80211_ATTR_PSK attribute is passed in
+ *	NL80211_CMD_CONNECT.
+ * @NL80211_KEY_MGMT_OFFLOAD_SUPPORT_PMKSA: Key management on already
+ *	established PMKSA.  The PMK will be passed using
+ *	NL80211_CMD_KEY_MGMT_SET_PMK once it is known.
+ * @NL80211_KEY_MGMT_OFFLOAD_SUPPORT_FT_802_1X: 802.11r (FT) with
+ *	802.1X.  The second 256 bits of the MSK is passed using
+ *	NL80211_CMD_KEY_MGMT_SET_PMK once it is known.
+ */
+enum nl80211_key_mgmt_offload_support {
+	NL80211_KEY_MGMT_OFFLOAD_SUPPORT_PSK		= 1 << 0,
+	NL80211_KEY_MGMT_OFFLOAD_SUPPORT_FT_PSK		= 1 << 1,
+	NL80211_KEY_MGMT_OFFLOAD_SUPPORT_PMKSA		= 1 << 2,
+	NL80211_KEY_MGMT_OFFLOAD_SUPPORT_FT_802_1X	= 1 << 3,
+};
+
+/**
+ * enum nl80211_key_derive_offload_support - key derivation offload types
+ *
+ * Supported types of device key derivation used as part of key
+ * management offload.  Assumes that GTK key derivation is supported
+ * by default for all supported key management offload types.
+ *
+ * @NL80211_KEY_DERIVE_OFFLOAD_SUPPORT_IGTK: IGTK key derivation.
+ * @NL80211_KEY_DERIVE_OFFLOAD_SUPPORT_SHA256: SHA-256 key derivation.
+ */
+enum nl80211_key_derive_offload_support {
+	NL80211_KEY_DERIVE_OFFLOAD_SUPPORT_IGTK		= 1 << 0,
+	NL80211_KEY_DERIVE_OFFLOAD_SUPPORT_SHA256	= 1 << 1,
+};
+
+/**
+ * enum nl80211_authorization_status - key management offload status
+ *
+ * Status of key management offload.  Provided as part of
+ * NL80211_CMD_AUTHORIZATION_EVENT.
+ *
+ * @NL80211_CONNECTED: Device did not successfully offload key
+ *	management.  Supplicant should expect to do the security
+ *	exchange necessary to establish the temporal keys for the
+ *	connection.
+ * @NL80211_AUTHORIZED: Device successfully offloaded key
+ *	management and established temporal keys for the connection,
+ *	signfiying that the initial connection, roaming, or PTK
+ *	rekeying is complete.  Supplicant should enter the
+ *	authorized state for the port.
+ */
+enum nl80211_authorization_status {
+	NL80211_CONNECTED,
+	NL80211_AUTHORIZED,
 };
 
 #endif /* __LINUX_NL80211_H */

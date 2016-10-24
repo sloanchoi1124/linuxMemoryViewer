@@ -15,9 +15,26 @@
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/fault-inject.h>
+#include <linux/uaccess.h>
 
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
+
+#ifdef CONFIG_HW_MMC_TOSHIBA_HEALTH_API
+#include <linux/mmc/mmc.h>
+#include <linux/scatterlist.h>
+#define MMC_GEN_CMD 56
+#define DHRDF_OK 0xA0
+#define DHCF_SUB_CMD_NO 0x5
+#define DHCF_PASSWORD 0x00175063
+#endif
+#ifdef CONFIG_HUAWEI_KERNEL
+/* Enum of power state */
+enum sd_type {
+    SDHC = 0,
+    SDXC,
+};
+#endif
 
 #include "core.h"
 #include "mmc_ops.h"
@@ -192,15 +209,78 @@ static int mmc_clock_opt_set(void *data, u64 val)
 	if (val > host->f_max)
 		return -EINVAL;
 
+	mmc_rpm_hold(host, &host->class_dev);
 	mmc_claim_host(host);
 	mmc_set_clock(host, (unsigned int) val);
 	mmc_release_host(host);
+	mmc_rpm_release(host, &host->class_dev);
 
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(mmc_clock_fops, mmc_clock_opt_get, mmc_clock_opt_set,
 	"%llu\n");
+
+static int mmc_max_clock_get(void *data, u64 *val)
+{
+	struct mmc_host *host = data;
+
+	if (!host)
+		return -EINVAL;
+
+	*val = host->f_max;
+
+	return 0;
+}
+
+static int mmc_max_clock_set(void *data, u64 val)
+{
+	struct mmc_host *host = data;
+	int err = -EINVAL;
+	unsigned long freq = val;
+	unsigned int old_freq;
+
+	if (!host || (val < host->f_min))
+		goto out;
+
+	mmc_rpm_hold(host, &host->class_dev);
+	mmc_claim_host(host);
+	if (host->bus_ops && host->bus_ops->change_bus_speed) {
+		old_freq = host->f_max;
+		host->f_max = freq;
+
+		err = host->bus_ops->change_bus_speed(host, &freq);
+
+		if (err)
+			host->f_max = old_freq;
+	}
+	mmc_release_host(host);
+	mmc_rpm_release(host, &host->class_dev);
+out:
+	return err;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(mmc_max_clock_fops, mmc_max_clock_get,
+		mmc_max_clock_set, "%llu\n");
+
+#ifdef CONFIG_HUAWEI_KERNEL
+static int mmc_sdxc_opt_get(void *data, u64 *val)
+{
+	struct mmc_card	*card = data;
+
+	if (mmc_card_ext_capacity(card))
+	{
+		*val = SDXC;
+		printk(KERN_INFO "sd card SDXC type is detected\n");
+		return 0;
+	}
+	*val = SDHC;
+	printk(KERN_INFO "sd card SDHC type is detected\n");
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(mmc_sdxc_fops, mmc_sdxc_opt_get,
+			NULL, "%llu\n");
+#endif
 
 void mmc_add_host_debugfs(struct mmc_host *host)
 {
@@ -222,6 +302,10 @@ void mmc_add_host_debugfs(struct mmc_host *host)
 
 	if (!debugfs_create_file("clock", S_IRUSR | S_IWUSR, root, host,
 			&mmc_clock_fops))
+		goto err_node;
+
+	if (!debugfs_create_file("max_clock", S_IRUSR | S_IWUSR, root, host,
+		&mmc_max_clock_fops))
 		goto err_node;
 
 #ifdef CONFIG_MMC_CLKGATE
@@ -258,6 +342,7 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 	u32		status;
 	int		ret;
 
+	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 
 	ret = mmc_send_status(data, &status);
@@ -265,6 +350,7 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 		*val = status;
 
 	mmc_release_host(card->host);
+	mmc_rpm_release(card->host, &card->dev);
 
 	return ret;
 }
@@ -291,9 +377,11 @@ static int mmc_ext_csd_open(struct inode *inode, struct file *filp)
 		goto out_free;
 	}
 
+	mmc_rpm_hold(card->host, &card->dev);
 	mmc_claim_host(card->host);
 	err = mmc_send_ext_csd(card, ext_csd);
 	mmc_release_host(card->host);
+	mmc_rpm_release(card->host, &card->dev);
 	if (err)
 		goto out_free;
 
@@ -334,14 +422,546 @@ static const struct file_operations mmc_dbg_ext_csd_fops = {
 	.llseek		= default_llseek,
 };
 
+static int mmc_wr_pack_stats_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+
+	filp->private_data = card;
+	card->wr_pack_stats.print_in_read = 1;
+	return 0;
+}
+
+#define TEMP_BUF_SIZE 256
+static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
+				size_t cnt, loff_t *ppos)
+{
+	struct mmc_card *card = filp->private_data;
+	struct mmc_wr_pack_stats *pack_stats;
+	int i;
+	int max_num_of_packed_reqs = 0;
+	char *temp_buf;
+
+	if (!card)
+		return cnt;
+
+	if (!access_ok(VERIFY_WRITE, ubuf, cnt))
+		return cnt;
+
+	if (!card->wr_pack_stats.print_in_read)
+		return 0;
+
+	if (!card->wr_pack_stats.enabled) {
+		pr_info("%s: write packing statistics are disabled\n",
+			 mmc_hostname(card->host));
+		goto exit;
+	}
+
+	pack_stats = &card->wr_pack_stats;
+
+	if (!pack_stats->packing_events) {
+		pr_info("%s: NULL packing_events\n", mmc_hostname(card->host));
+		goto exit;
+	}
+
+	max_num_of_packed_reqs = card->ext_csd.max_packed_writes;
+
+	temp_buf = kmalloc(TEMP_BUF_SIZE, GFP_KERNEL);
+	if (!temp_buf)
+		goto exit;
+
+	spin_lock(&pack_stats->lock);
+
+	snprintf(temp_buf, TEMP_BUF_SIZE, "%s: write packing statistics:\n",
+		mmc_hostname(card->host));
+	strlcat(ubuf, temp_buf, cnt);
+
+	for (i = 1 ; i <= max_num_of_packed_reqs ; ++i) {
+		if (pack_stats->packing_events[i]) {
+			snprintf(temp_buf, TEMP_BUF_SIZE,
+				 "%s: Packed %d reqs - %d times\n",
+				mmc_hostname(card->host), i,
+				pack_stats->packing_events[i]);
+			strlcat(ubuf, temp_buf, cnt);
+		}
+	}
+
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+		 "%s: stopped packing due to the following reasons:\n",
+		 mmc_hostname(card->host));
+	strlcat(ubuf, temp_buf, cnt);
+
+	if (pack_stats->pack_stop_reason[EXCEEDS_SEGMENTS]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: exceed max num of segments\n",
+			 mmc_hostname(card->host),
+			 pack_stats->pack_stop_reason[EXCEEDS_SEGMENTS]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[EXCEEDS_SECTORS]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: exceed max num of sectors\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[EXCEEDS_SECTORS]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[WRONG_DATA_DIR]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: wrong data direction\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[WRONG_DATA_DIR]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[FLUSH_OR_DISCARD]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: flush or discard\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[FLUSH_OR_DISCARD]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[EMPTY_QUEUE]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: empty queue\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[EMPTY_QUEUE]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[REL_WRITE]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: rel write\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[REL_WRITE]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[THRESHOLD]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: Threshold\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[THRESHOLD]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+
+	if (pack_stats->pack_stop_reason[LARGE_SEC_ALIGN]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: Large sector alignment\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[LARGE_SEC_ALIGN]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[RANDOM]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: random request\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[RANDOM]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+	if (pack_stats->pack_stop_reason[FUA]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: fua request\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[FUA]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+
+	spin_unlock(&pack_stats->lock);
+
+	kfree(temp_buf);
+
+	pr_info("%s", ubuf);
+
+exit:
+	if (card->wr_pack_stats.print_in_read == 1) {
+		card->wr_pack_stats.print_in_read = 0;
+		return strnlen(ubuf, cnt);
+	}
+
+	return 0;
+}
+
+static ssize_t mmc_wr_pack_stats_write(struct file *filp,
+				       const char __user *ubuf, size_t cnt,
+				       loff_t *ppos)
+{
+	struct mmc_card *card = filp->private_data;
+	int value;
+
+	if (!card)
+		return cnt;
+
+	if (!access_ok(VERIFY_READ, ubuf, cnt))
+		return cnt;
+
+	sscanf(ubuf, "%d", &value);
+	if (value) {
+		mmc_blk_init_packed_statistics(card);
+	} else {
+		spin_lock(&card->wr_pack_stats.lock);
+		card->wr_pack_stats.enabled = false;
+		spin_unlock(&card->wr_pack_stats.lock);
+	}
+
+	return cnt;
+}
+
+static const struct file_operations mmc_dbg_wr_pack_stats_fops = {
+	.open		= mmc_wr_pack_stats_open,
+	.read		= mmc_wr_pack_stats_read,
+	.write		= mmc_wr_pack_stats_write,
+};
+
+static int mmc_bkops_stats_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+
+	filp->private_data = card;
+
+	card->bkops_info.bkops_stats.print_stats = 1;
+	return 0;
+}
+
+static ssize_t mmc_bkops_stats_read(struct file *filp, char __user *ubuf,
+				     size_t cnt, loff_t *ppos)
+{
+	struct mmc_card *card = filp->private_data;
+	struct mmc_bkops_stats *bkops_stats;
+	int i;
+	char *temp_buf;
+
+	if (!card)
+		return cnt;
+
+	if (!access_ok(VERIFY_WRITE, ubuf, cnt))
+		return cnt;
+
+	bkops_stats = &card->bkops_info.bkops_stats;
+
+	if (!bkops_stats->print_stats)
+		return 0;
+
+	if (!bkops_stats->enabled) {
+		pr_info("%s: bkops statistics are disabled\n",
+			 mmc_hostname(card->host));
+		goto exit;
+	}
+
+	temp_buf = kmalloc(TEMP_BUF_SIZE, GFP_KERNEL);
+	if (!temp_buf)
+		goto exit;
+
+	spin_lock(&bkops_stats->lock);
+
+	memset(ubuf, 0, cnt);
+
+	snprintf(temp_buf, TEMP_BUF_SIZE, "%s: bkops statistics:\n",
+		mmc_hostname(card->host));
+	strlcat(ubuf, temp_buf, cnt);
+
+	for (i = 0 ; i < BKOPS_NUM_OF_SEVERITY_LEVELS ; ++i) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: BKOPS: due to level %d: %u\n",
+		 mmc_hostname(card->host), i, bkops_stats->bkops_level[i]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
+
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+		 "%s: BKOPS: stopped due to HPI: %u\n",
+		 mmc_hostname(card->host), bkops_stats->hpi);
+	strlcat(ubuf, temp_buf, cnt);
+
+	snprintf(temp_buf, TEMP_BUF_SIZE,
+		 "%s: BKOPS: how many time host was suspended: %u\n",
+		 mmc_hostname(card->host), bkops_stats->suspend);
+	strlcat(ubuf, temp_buf, cnt);
+
+	spin_unlock(&bkops_stats->lock);
+
+	kfree(temp_buf);
+
+	pr_info("%s", ubuf);
+
+exit:
+	if (bkops_stats->print_stats == 1) {
+		bkops_stats->print_stats = 0;
+		return strnlen(ubuf, cnt);
+	}
+
+	return 0;
+}
+
+static ssize_t mmc_bkops_stats_write(struct file *filp,
+				      const char __user *ubuf, size_t cnt,
+				      loff_t *ppos)
+{
+	struct mmc_card *card = filp->private_data;
+	int value;
+	struct mmc_bkops_stats *bkops_stats;
+
+	if (!card)
+		return cnt;
+
+	if (!access_ok(VERIFY_READ, ubuf, cnt))
+		return cnt;
+
+	bkops_stats = &card->bkops_info.bkops_stats;
+
+	sscanf(ubuf, "%d", &value);
+	if (value) {
+		mmc_blk_init_bkops_statistics(card);
+	} else {
+		spin_lock(&bkops_stats->lock);
+		bkops_stats->enabled = false;
+		spin_unlock(&bkops_stats->lock);
+	}
+
+	return cnt;
+}
+
+static const struct file_operations mmc_dbg_bkops_stats_fops = {
+	.open		= mmc_bkops_stats_open,
+	.read		= mmc_bkops_stats_read,
+	.write		= mmc_bkops_stats_write,
+};
+#ifdef CONFIG_HW_MMC_TOSHIBA_HEALTH_API
+static int mmc_health_st_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+	filp->private_data = card;
+
+	return 0;
+}
+
+static int issue_health_st_cmd(struct mmc_card * card, int arg,
+        char *pbuf, int len)
+{
+    struct mmc_command cmd = {0};
+    struct mmc_data data = {0};
+	struct mmc_request brq = {0};
+	struct scatterlist sg;
+
+    brq.cmd = &cmd;
+	brq.data = &data;
+	brq.stop = NULL;
+
+	cmd.opcode = MMC_GEN_CMD;
+	cmd.arg = arg;
+	cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+
+    data.blksz = len;
+	data.blocks = 1;
+    if(arg == 0){
+        data.flags = MMC_DATA_WRITE;
+    }else{
+        data.flags = MMC_DATA_READ;
+    }
+
+	data.sg = &sg;
+	data.sg_len = 1;
+
+	sg_init_one(&sg, pbuf, len);
+	mmc_set_data_timeout(&data, card);
+	mmc_wait_for_req(card->host, &brq);
+
+	if (cmd.error){
+		return cmd.error;
+    }
+
+	if (data.error){
+		return data.error;
+    }
+
+	return 0;
+}
+
+static ssize_t mmc_health_st_read(struct file *filp, char __user *ubuf,
+				     size_t cnt, loff_t *ppos)
+{
+    char *pbuf = 0;
+    int len = 512;
+    u32 status = 0;
+    struct mmc_card *card = filp->private_data;
+    int err = 0;
+    int card_used_life = 0;
+
+    pbuf = kmalloc(len, GFP_KERNEL);
+    if(!pbuf){
+        return 0;
+    }
+
+    /*********************************************
+     * Device Health Command Format(DHCF).
+     * DHCF[0] : 0x5 Sub Command Number
+     * DHCF[1^3] : Dummy Data.
+     * DHCF[4^7] : Defined password for device health.
+     * DHCF[8^0x1FF] : reserved.
+     ******************************************/
+	memset(pbuf, 0x00, len);
+
+    pbuf[0] = DHCF_SUB_CMD_NO;
+    pbuf[4] = DHCF_PASSWORD & 0xFF;
+    pbuf[5] = (DHCF_PASSWORD >> 8) & 0xFF;
+    pbuf[6] = (DHCF_PASSWORD >> 16) & 0xFF;
+    pbuf[7] = (DHCF_PASSWORD >> 24) & 0xFF;
+
+    /*cmd 56 (arg = 0)->R1(512B)->DHC(Device Health Command)*/
+    mmc_rpm_hold(card->host, &card->dev);
+    mmc_claim_host(card->host);
+    err = issue_health_st_cmd(card, 0, pbuf, len);
+    if(err){
+        pr_err("[HW]:%s:failed to issue health state command.", __func__);
+        goto error;
+    }
+
+    //make sure device state is READY.
+    do {
+        err =  mmc_send_status(card, &status);
+        if (err) {
+            pr_err("[HW]:%s:failed to request device status\n",
+                    __func__);
+            goto error;
+        }
+
+    } while (!(status & R1_READY_FOR_DATA) ||
+            (R1_CURRENT_STATE(status) == R1_STATE_PRG));
+
+    /*cmd 56 (arg =1)->R1(512B)->DHRD(Device Health Response Data)*/
+    memset(pbuf, 0x00, len);
+    err = issue_health_st_cmd(card, 1, pbuf, len);
+    mmc_release_host(card->host);
+    mmc_rpm_release(card->host, &card->dev);
+    if(err){
+        pr_err("[HW]:%s:failed to get health state.", __func__);
+        goto error;
+    }
+
+     /*********************************************
+     * Device Health Response Data Format(DHRDF).
+     * DHRDF[0] : Sub Command Number(0x5)
+     * DHRDF[1^2] : Reserved.
+     * DHRDF[3] : Status(0xA0:valid; 0xE0:NG).
+     * DHRDF[4] : Device Health.
+     * DHRDF[5^0x1FF] : reserved.
+     ******************************************/
+    if(pbuf[3] == DHRDF_OK){
+        card_used_life = pbuf[4];
+        memset(pbuf, 0x00, len);
+        snprintf(pbuf, len, "0x%02x.", card_used_life);
+        len = simple_read_from_buffer(ubuf, cnt, ppos,
+                pbuf, 4);
+    }else{
+        pr_err("[HW]:%s: health state is invalid.", __func__);
+        goto error;
+    }
+
+    kfree(pbuf);
+    return len;
+error:
+    kfree(pbuf);
+    return -1;
+}
+
+static const struct file_operations mmc_dbg_health_st_fops = {
+	.open		= mmc_health_st_open,
+	.read		= mmc_health_st_read,
+    .llseek     = default_llseek,
+};
+#endif
+
+#ifdef CONFIG_HW_MMC_TEST
+static int mmc_card_addr_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+	filp->private_data = card;
+
+	return 0;
+}
+
+static ssize_t mmc_card_addr_read(struct file *filp, char __user *ubuf,
+				     size_t cnt, loff_t *ppos)
+{
+    char buf[64] = {0};
+    struct mmc_card *card = filp->private_data;
+    long card_addr = (long)card;
+
+    card_addr = (long)(card_addr ^ CARD_ADDR_MAGIC);
+    snprintf(buf, sizeof(buf), "%ld", card_addr);
+
+    return simple_read_from_buffer(ubuf, cnt, ppos,
+            buf, sizeof(buf));
+}
+
+static const struct file_operations mmc_dbg_card_addr_fops = {
+	.open		= mmc_card_addr_open,
+	.read		= mmc_card_addr_read,
+    .llseek     = default_llseek,
+};
+
+static int mmc_test_st_open(struct inode *inode, struct file *filp)
+{
+	struct mmc_card *card = inode->i_private;
+
+	filp->private_data = card;
+
+	return 0;
+}
+
+static ssize_t mmc_test_st_read(struct file *filp, char __user *ubuf,
+				     size_t cnt, loff_t *ppos)
+{
+    char buf[64] = {0};
+	struct mmc_card *card = filp->private_data;
+
+	if (!card)
+		return cnt;
+
+    snprintf(buf, sizeof(buf), "%d", card->host->test_status);
+
+    return simple_read_from_buffer(ubuf, cnt, ppos,
+            buf, sizeof(buf));
+
+}
+
+static ssize_t mmc_test_st_write(struct file *filp,
+				      const char __user *ubuf, size_t cnt,
+				      loff_t *ppos)
+{
+	struct mmc_card *card = filp->private_data;
+	int value;
+
+	if (!card){
+        return cnt;
+    }
+
+	sscanf(ubuf, "%d", &value);
+    card->host->test_status = value;
+
+	return cnt;
+}
+
+static const struct file_operations mmc_dbg_test_st_fops = {
+	.open		= mmc_test_st_open,
+	.read		= mmc_test_st_read,
+	.write		= mmc_test_st_write,
+};
+#endif
+
 void mmc_add_card_debugfs(struct mmc_card *card)
 {
 	struct mmc_host	*host = card->host;
 	struct dentry	*root;
-
+#ifdef CONFIG_HUAWEI_KERNEL
+	struct dentry   *sdxc_root;
+#endif
+	
 	if (!host->debugfs_root)
 		return;
 
+#ifdef CONFIG_HUAWEI_KERNEL
+	sdxc_root = debugfs_create_dir("sdxc_root", host->debugfs_root);
+	if (IS_ERR(sdxc_root))
+		return;
+	if (!sdxc_root)
+		goto err;
+#endif
+		
 	root = debugfs_create_dir(mmc_card_id(card), host->debugfs_root);
 	if (IS_ERR(root))
 		/* Don't complain -- debugfs just isn't enabled */
@@ -351,6 +971,9 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 		 * create the directory. */
 		goto err;
 
+#ifdef CONFIG_HUAWEI_KERNEL
+	card->debugfs_sdxc = sdxc_root;
+#endif
 	card->debugfs_root = root;
 
 	if (!debugfs_create_x32("state", S_IRUSR, root, &card->state))
@@ -366,15 +989,63 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 					&mmc_dbg_ext_csd_fops))
 			goto err;
 
+	if (mmc_card_mmc(card) && (card->ext_csd.rev >= 6) &&
+	    (card->host->caps2 & MMC_CAP2_PACKED_WR))
+		if (!debugfs_create_file("wr_pack_stats", S_IRUSR, root, card,
+					 &mmc_dbg_wr_pack_stats_fops))
+			goto err;
+
+	if (mmc_card_mmc(card) && (card->ext_csd.rev >= 5) &&
+	    card->ext_csd.bkops_en)
+		if (!debugfs_create_file("bkops_stats", S_IRUSR, root, card,
+					 &mmc_dbg_bkops_stats_fops))
+			goto err;
+#ifdef CONFIG_HW_MMC_TOSHIBA_HEALTH_API
+    if(card->cid.manfid == CID_MANFID_TOSHIBA){
+        if(mmc_card_mmc(card))
+            if (!debugfs_create_file("health_st", S_IRUSR, root, card,
+                        &mmc_dbg_health_st_fops))
+                goto err;
+    }
+#endif
+
+#ifdef CONFIG_HW_MMC_TEST
+    if (mmc_card_mmc(card))
+        if (!debugfs_create_file("card_addr", S_IRUSR, root, card,
+                    &mmc_dbg_card_addr_fops))
+            goto err;
+
+    if (mmc_card_mmc(card))
+        if (!debugfs_create_file("test_st", S_IRUSR, root, card,
+                    &mmc_dbg_test_st_fops))
+            goto err;
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+	if (mmc_card_sd(card))
+		if (!debugfs_create_file("sdxc", S_IRUSR, sdxc_root, card,
+					&mmc_sdxc_fops))
+			goto err;
+#endif
 	return;
 
 err:
 	debugfs_remove_recursive(root);
+#ifdef CONFIG_HUAWEI_KERNEL
+	debugfs_remove_recursive(sdxc_root);
+#endif
 	card->debugfs_root = NULL;
+#ifdef CONFIG_HUAWEI_KERNEL
+	card->debugfs_sdxc = NULL;
+#endif
+	
 	dev_err(&card->dev, "failed to initialize debugfs\n");
 }
 
 void mmc_remove_card_debugfs(struct mmc_card *card)
 {
 	debugfs_remove_recursive(card->debugfs_root);
+#ifdef CONFIG_HUAWEI_KERNEL	
+	debugfs_remove_recursive(card->debugfs_sdxc);
+#endif
 }

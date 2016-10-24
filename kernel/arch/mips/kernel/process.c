@@ -32,7 +32,6 @@
 #include <asm/cpu.h>
 #include <asm/dsp.h>
 #include <asm/fpu.h>
-#include <asm/msa.h>
 #include <asm/pgtable.h>
 #include <asm/mipsregs.h>
 #include <asm/processor.h>
@@ -42,7 +41,6 @@
 #include <asm/isadep.h>
 #include <asm/inst.h>
 #include <asm/stacktrace.h>
-#include <asm/vdso.h>
 
 #ifdef CONFIG_HOTPLUG_CPU
 void arch_cpu_idle_dead(void)
@@ -60,54 +58,27 @@ void start_thread(struct pt_regs * regs, unsigned long pc, unsigned long sp)
 {
 	unsigned long status;
 
-	mips_thread_vdso(current_thread_info());
-
 	/* New thread loses kernel privileges. */
 	status = regs->cp0_status & ~(ST0_CU0|ST0_CU1|ST0_FR|KU_MASK);
+#ifdef CONFIG_64BIT
+	status |= test_thread_flag(TIF_32BIT_REGS) ? 0 : ST0_FR;
+#endif
 	status |= KU_USER;
 	regs->cp0_status = status;
 	clear_used_math();
 	clear_fpu_owner();
-	init_dsp();
-	clear_thread_flag(TIF_USEDMSA);
-	clear_thread_flag(TIF_MSA_CTX_LIVE);
-	disable_msa();
+	if (cpu_has_dsp)
+		__init_dsp();
 	regs->cp0_epc = pc;
 	regs->regs[29] = sp;
 }
 
 void exit_thread(void)
 {
-	arch_release_thread_info(current_thread_info());
 }
 
 void flush_thread(void)
 {
-}
-
-int arch_dup_task_struct(struct task_struct *dst, struct task_struct *src)
-{
-	/*
-	 * Save any process state which is live in hardware registers to the
-	 * parent context prior to duplication. This prevents the new child
-	 * state becoming stale if the parent is preempted before copy_thread()
-	 * gets a chance to save the parent's live hardware registers to the
-	 * child context.
-	 */
-	preempt_disable();
-
-	if (is_msa_enabled())
-		save_msa(current);
-	else if (is_fpu_owner())
-		_save_fp(current);
-
-	if (cpu_has_dsp)
-		save_dsp(current);
-
-	preempt_enable();
-
-	*dst = *src;
-	return 0;
 }
 
 int copy_thread(unsigned long clone_flags, unsigned long usp,
@@ -120,8 +91,15 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 
 	childksp = (unsigned long)task_stack_page(p) + THREAD_SIZE - 32;
 
-	ti->vdso_page = NULL;
-	mips_thread_vdso(ti);
+	preempt_disable();
+
+	if (is_fpu_owner())
+		save_fp(p);
+
+	if (cpu_has_dsp)
+		save_dsp(p);
+
+	preempt_enable();
 
 	/* set up new TSS. */
 	childregs = (struct pt_regs *) childksp - 1;
@@ -169,8 +147,6 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	childregs->cp0_tcstatus &= ~(ST0_CU2|ST0_CU1);
 #endif
 	clear_tsk_thread_flag(p, TIF_USEDFPU);
-	clear_tsk_thread_flag(p, TIF_USEDMSA);
-	clear_tsk_thread_flag(p, TIF_MSA_CTX_LIVE);
 
 #ifdef CONFIG_MIPS_MT_FPAFF
 	clear_tsk_thread_flag(p, TIF_FPUBOUND);
@@ -185,13 +161,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 /* Fill in the fpu structure for a core dump.. */
 int dump_fpu(struct pt_regs *regs, elf_fpregset_t *r)
 {
-	int i;
-	elf_greg_t fr, *p = (elf_greg_t *)r;
-
-	for (i = 0; i < NUM_FPU_REGS; i++) {
-		fr = get_fpr64(&current->thread.fpu.fpr[i], 0);
-		p[i] = fr;
-	}
+	memcpy(r, &current->thread.fpu, sizeof(current->thread.fpu));
 
 	return 1;
 }
@@ -226,13 +196,7 @@ int dump_task_regs(struct task_struct *tsk, elf_gregset_t *regs)
 
 int dump_task_fpu(struct task_struct *t, elf_fpregset_t *fpr)
 {
-	int i;
-	elf_greg_t fr, *p = (elf_greg_t *)fpr;
-
-	for (i = 0; i < NUM_FPU_REGS; i++) {
-		fr = get_fpr64(&t->thread.fpu.fpr[i], 0);
-		p[i] = fr;
-	}
+	memcpy(fpr, &t->thread.fpu, sizeof(current->thread.fpu));
 
 	return 1;
 }
@@ -318,19 +282,9 @@ static inline int is_jump_ins(union mips_instruction *ip)
 		return 1;
 	if (ip->j_format.opcode == jal_op)
 		return 1;
-#ifdef CONFIG_CPU_MIPSR6
-	if (((ip->i_format.opcode == jump_op) ||   /* jic */
-	     (ip->i_format.opcode == jump2_op)) && /* jialc */
-	    (ip->i_format.rs == 0))
-		return 1;
-	if (ip->r_format.opcode != spec_op)
-		return 0;
-	return ((ip->r_format.func == jalr_op) && !ip->r_format.rt);
-#else
 	if (ip->r_format.opcode != spec_op)
 		return 0;
 	return ip->r_format.func == jalr_op || ip->r_format.func == jr_op;
-#endif
 #endif
 }
 

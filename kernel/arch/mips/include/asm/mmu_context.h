@@ -24,14 +24,6 @@
 #endif /* SMTC */
 #include <asm-generic/mm_hooks.h>
 
-#define htw_set_pwbase(pgd)						\
-do {									\
-	if (cpu_has_htw) {                                              \
-		write_c0_pwbase(pgd);					\
-		back_to_back_c0_hazard();                               \
-	}                                                               \
-} while (0)
-
 #ifdef CONFIG_MIPS_PGD_C0_CONTEXT
 
 #define TLBMISS_HANDLER_SETUP_PGD(pgd)					\
@@ -42,14 +34,12 @@ do {									\
 	tlbmiss_handler_setup_pgd =					\
 		(__typeof__(tlbmiss_handler_setup_pgd)) tlbmiss_handler_setup_pgd_array; \
 	tlbmiss_handler_setup_pgd((unsigned long)(pgd));		\
-	htw_set_pwbase((unsigned long)pgd);				\
 } while (0)
 
 #define TLBMISS_HANDLER_SETUP()						\
 	do {								\
 		TLBMISS_HANDLER_SETUP_PGD(swapper_pg_dir);		\
 		write_c0_xcontext((unsigned long) smp_processor_id() << 51); \
-		back_to_back_c0_hazard();                               \
 	} while (0)
 
 #else /* CONFIG_MIPS_PGD_C0_CONTEXT: using  pgd_current*/
@@ -61,26 +51,20 @@ do {									\
  */
 extern unsigned long pgd_current[];
 
-#ifdef CONFIG_32BIT
 #define TLBMISS_HANDLER_SETUP_PGD(pgd) \
-	pgd_current[smp_processor_id()] = (unsigned long)(pgd);         \
-	htw_set_pwbase((unsigned long)pgd);
+	pgd_current[smp_processor_id()] = (unsigned long)(pgd)
 
+#ifdef CONFIG_32BIT
 #define TLBMISS_HANDLER_SETUP()						\
 	write_c0_context((unsigned long) smp_processor_id() << 25);	\
 	back_to_back_c0_hazard();					\
-	TLBMISS_HANDLER_SETUP_PGD(swapper_pg_dir);
+	TLBMISS_HANDLER_SETUP_PGD(swapper_pg_dir)
 #endif
 #ifdef CONFIG_64BIT
-#define TLBMISS_HANDLER_SETUP_PGD(pgd) \
-	pgd_current[2 * smp_processor_id()] = (unsigned long)(pgd);         \
-	pgd_current[(2 *smp_processor_id())+1] = (unsigned long)(swapper_pg_dir);         \
-	htw_set_pwbase((unsigned long)pgd);
-
 #define TLBMISS_HANDLER_SETUP()						\
-	write_c0_context((unsigned long) smp_processor_id() << 27);     \
+	write_c0_context((unsigned long) smp_processor_id() << 26);	\
 	back_to_back_c0_hazard();					\
-	TLBMISS_HANDLER_SETUP_PGD(swapper_pg_dir);
+	TLBMISS_HANDLER_SETUP_PGD(swapper_pg_dir)
 #endif
 #endif /* CONFIG_MIPS_PGD_C0_CONTEXT*/
 #if defined(CONFIG_CPU_R3000) || defined(CONFIG_CPU_TX39XX)
@@ -180,7 +164,6 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 #else /* Not SMTC */
 	local_irq_save(flags);
 #endif /* CONFIG_MIPS_MT_SMTC */
-	htw_stop();
 
 	/* Check if our ASID is of an older version and thus invalid */
 	if ((cpu_context(cpu, next) ^ asid_cache(cpu)) & ASID_VERSION_MASK)
@@ -220,7 +203,6 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 	 */
 	cpumask_clear_cpu(cpu, mm_cpumask(prev));
 	cpumask_set_cpu(cpu, mm_cpumask(next));
-	htw_start();
 
 	local_irq_restore(flags);
 }
@@ -252,7 +234,6 @@ activate_mm(struct mm_struct *prev, struct mm_struct *next)
 #endif /* CONFIG_MIPS_MT_SMTC */
 
 	local_irq_save(flags);
-	htw_stop();
 
 	/* Unconditionally get a new ASID.  */
 	get_new_mmu_context(next, cpu);
@@ -279,7 +260,6 @@ activate_mm(struct mm_struct *prev, struct mm_struct *next)
 	/* mark mmu ownership change */
 	cpumask_clear_cpu(cpu, mm_cpumask(prev));
 	cpumask_set_cpu(cpu, mm_cpumask(next));
-	htw_start();
 
 	local_irq_restore(flags);
 }
@@ -300,7 +280,6 @@ drop_mmu_context(struct mm_struct *mm, unsigned cpu)
 #endif /* CONFIG_MIPS_MT_SMTC */
 
 	local_irq_save(flags);
-	htw_stop();
 
 	if (cpumask_test_cpu(cpu, mm_cpumask(mm)))  {
 		get_new_mmu_context(mm, cpu);
@@ -336,7 +315,6 @@ drop_mmu_context(struct mm_struct *mm, unsigned cpu)
 		}
 #endif /* CONFIG_MIPS_MT_SMTC */
 	}
-	htw_start();
 	local_irq_restore(flags);
 }
 

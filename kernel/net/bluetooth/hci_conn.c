@@ -96,6 +96,8 @@ static void hci_acl_create_connection(struct hci_conn *conn)
 	}
 
 	cp.pkt_type = cpu_to_le16(conn->pkt_type);
+	/* Allow DUT to be MASTER for allow outgoing connection requests */
+	hdev->link_mode |= HCI_LM_MASTER;
 	if (lmp_rswitch_capable(hdev) && !(hdev->link_mode & HCI_LM_MASTER))
 		cp.role_switch = 0x01;
 	else
@@ -308,6 +310,9 @@ static void hci_conn_enter_sniff_mode(struct hci_conn *conn)
 	BT_DBG("hcon %p mode %d", conn, conn->mode);
 
 	if (test_bit(HCI_RAW, &hdev->flags))
+		return;
+
+	if (conn->type == LE_LINK)
 		return;
 
 	if (!lmp_sniff_capable(hdev) || !lmp_sniff_capable(conn))
@@ -580,7 +585,18 @@ static struct hci_conn *hci_connect_sco(struct hci_dev *hdev, int type,
 	if (IS_ERR(acl))
 		return acl;
 
+	/* type of connection already existing can be ESCO or SCO
+	 * so check for both types before creating new */
+
 	sco = hci_conn_hash_lookup_ba(hdev, type, dst);
+
+	if (!sco && type == ESCO_LINK) {
+		sco = hci_conn_hash_lookup_ba(hdev, SCO_LINK, dst);
+	} else if (!sco && type == SCO_LINK) {
+		/* this case can be practically not possible */
+		sco = hci_conn_hash_lookup_ba(hdev, ESCO_LINK, dst);
+	}
+
 	if (!sco) {
 		sco = hci_conn_add(hdev, type, pkt_type, dst);
 		if (!sco) {
@@ -663,14 +679,17 @@ static int hci_conn_auth(struct hci_conn *conn, __u8 sec_level, __u8 auth_type)
 	if (!test_and_set_bit(HCI_CONN_AUTH_PEND, &conn->flags)) {
 		struct hci_cp_auth_requested cp;
 
-		/* encrypt must be pending if auth is also pending */
-		set_bit(HCI_CONN_ENCRYPT_PEND, &conn->flags);
-
 		cp.handle = cpu_to_le16(conn->handle);
 		hci_send_cmd(conn->hdev, HCI_OP_AUTH_REQUESTED,
 			     sizeof(cp), &cp);
-		if (conn->key_type != 0xff)
+
+		/* If we're already encrypted set the REAUTH_PEND flag,
+		 * otherwise set the ENCRYPT_PEND.
+		 */
+		if (conn->link_mode & HCI_LM_ENCRYPT)
 			set_bit(HCI_CONN_REAUTH_PEND, &conn->flags);
+		else
+			set_bit(HCI_CONN_ENCRYPT_PEND, &conn->flags);
 	}
 
 	return 0;
@@ -795,6 +814,24 @@ int hci_conn_switch_role(struct hci_conn *conn, __u8 role)
 }
 EXPORT_SYMBOL(hci_conn_switch_role);
 
+/* Change ACL link policy */
+int hci_cfg_link_policy(struct hci_conn *conn)
+{
+	struct hci_cp_write_link_policy lp;
+
+	if (conn == NULL) {
+		BT_ERR("%s: NO HCI Connection handle available!", __func__);
+		return -ENODEV;
+	}
+	BT_INFO("%s: Disabling role switch on the ACL handle %d",
+		__func__, conn->handle);
+	lp.handle = conn->handle;
+	lp.policy = HCI_LP_HOLD|HCI_LP_SNIFF|HCI_LP_PARK;
+	hci_send_cmd(conn->hdev, HCI_OP_WRITE_LINK_POLICY, sizeof(lp), &lp);
+	return 0;
+}
+EXPORT_SYMBOL(hci_cfg_link_policy);
+
 /* Enter active mode */
 void hci_conn_enter_active_mode(struct hci_conn *conn, __u8 force_active)
 {
@@ -803,6 +840,9 @@ void hci_conn_enter_active_mode(struct hci_conn *conn, __u8 force_active)
 	BT_DBG("hcon %p mode %d", conn, conn->mode);
 
 	if (test_bit(HCI_RAW, &hdev->flags))
+		return;
+
+	if (conn->type == LE_LINK)
 		return;
 
 	if (conn->mode != HCI_CM_SNIFF)

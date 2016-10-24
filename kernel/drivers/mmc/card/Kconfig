@@ -78,14 +78,58 @@ config MMC_TEST
 	  This driver is only of interest to those developing or
 	  testing a host driver. Most people should say N here.
 
-config MMC_SIMULATE_MAX_SPEED
-	bool "Turn on maximum speed control per block device"
-	depends on MMC_BLOCK
+config MMC_BLOCK_TEST
+	tristate "MMC block test"
+	depends on MMC_BLOCK && IOSCHED_TEST
 	help
-	  Say Y here to enable MMC device speed limiting. Used to test and
-	  simulate the behavior of the system when confronted with a slow MMC.
+	  MMC block test can be used with test iosched to test the MMC block
+	  device.
+	  Currently used to test eMMC 4.5 features (packed commands, sanitize,
+	  BKOPs).
 
-	  Enables max_read_speed, max_write_speed and cache_size attributes to
-	  control the write or read maximum KB/second speed behaviors.
+config HW_EMMC_PROTECT_MODULE
+	tristate "EMMC write protect driver by Huawei"
+	depends on HW_SYSTEM_WR_PROTECT && HUAWEI_KERNEL
+	default m
+	help
+	  This is for EMMC to write protect
+config HW_MMC_TEST
+	bool "MMC host test driver by Huawei"
+	depends on  HUAWEI_KERNEL
+	default n
+	help
+	  it's used as a pre-compile macro for mmc test driver by huawei.
+	  
+config HW_MMC_TEST_MODULE
+	tristate "MMC host test driver by Huawei"
+	depends on HW_MMC_TEST && HUAWEI_KERNEL
+	default n
+	help
+	  Development driver that performs a series of reads and writes
+	  to a memory card in order to expose certain well known bugs
+	  in host controllers. The tests are executed by writing to the
+	  "test" file in debugfs under each card. Note that whatever is
+	  on your card will be overwritten by these tests.
 
-	  If unsure, say N here.
+	  This driver is only of interest to those developing or
+	  testing a host driver. Most people should say N here.
+#remove it
+config MMC_FFU
+	bool "FFU SUPPORT"
+	depends on MMC != n
+	default n
+	help
+	  This is an option to run firmware update on eMMC 5.0.
+	  Field firmware updates (FFU) enables features enhancment
+	  in the field.
+
+config HW_SD_HEALTH_DETECT
+	bool "SD HEALTH DIAG SUPPORT"
+	default y
+	help
+	  This is an option to diag sd health status.
+config HW_EMMC_PHYSICS_PROTECT
+      bool " EMMC PHYSICS PROTEC"
+      default y
+      help
+      This is an option to protect emmc physic.

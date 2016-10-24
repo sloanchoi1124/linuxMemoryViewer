@@ -147,7 +147,7 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
 	unsigned long random_factor = 0UL;
 
 	if (current->flags & PF_RANDOMIZE) {
-		random_factor = get_random_long();
+		random_factor = get_random_int();
 		random_factor = random_factor << PAGE_SHIFT;
 		if (TASK_IS_32BIT_ADDR)
 			random_factor &= 0xfffffful;
@@ -158,17 +158,15 @@ void arch_pick_mmap_layout(struct mm_struct *mm)
 	if (mmap_is_legacy()) {
 		mm->mmap_base = TASK_UNMAPPED_BASE + random_factor;
 		mm->get_unmapped_area = arch_get_unmapped_area;
-		mm->unmap_area = arch_unmap_area;
 	} else {
 		mm->mmap_base = mmap_base(random_factor);
 		mm->get_unmapped_area = arch_get_unmapped_area_topdown;
-		mm->unmap_area = arch_unmap_area_topdown;
 	}
 }
 
 static inline unsigned long brk_rnd(void)
 {
-	unsigned long rnd = get_random_long();
+	unsigned long rnd = get_random_int();
 
 	rnd = rnd << PAGE_SHIFT;
 	/* 8MB for 32bit, 256MB for 64bit */

@@ -198,17 +198,11 @@ void __init mips_pcibios_init(void)
 		MSC_READ(MSC01_PCI_SC2PMBASL, start);
 		MSC_READ(MSC01_PCI_SC2PMMSKL, mask);
 		MSC_READ(MSC01_PCI_SC2PMMAPL, map);
-#if defined(CONFIG_EVA) && !defined(CONFIG_EVA_OLD_MALTA_MAP)
-		/* shift PCI devices to upper 2GB, to prevent PCI bridges loop */
-		map |= 0xa0000000;
-		MSC_WRITE(MSC01_PCI_SC2PMMAPL, map);
-		MSC_READ(MSC01_PCI_SC2PMMAPL, map);
-#endif
 		msc_mem_resource.start = start & mask;
 		msc_mem_resource.end = (start & mask) | ~mask;
 		msc_controller.mem_offset = (start & mask) - (map & mask);
 #ifdef CONFIG_MIPS_CMP
-		if ((!gcmp3_present) && gcmp_niocu())
+		if (gcmp_niocu())
 			gcmp_setregion(0, start, mask,
 				GCMP_GCB_GCMPB_CMDEFTGT_IOCU1);
 #endif
@@ -220,7 +214,7 @@ void __init mips_pcibios_init(void)
 		msc_controller.io_offset = 0;
 		ioport_resource.end = ~mask;
 #ifdef CONFIG_MIPS_CMP
-		if ((!gcmp3_present) && gcmp_niocu())
+		if (gcmp_niocu())
 			gcmp_setregion(1, start, mask,
 				GCMP_GCB_GCMPB_CMDEFTGT_IOCU1);
 #endif

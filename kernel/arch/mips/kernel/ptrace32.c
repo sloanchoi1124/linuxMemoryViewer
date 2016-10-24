@@ -80,7 +80,6 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 	/* Read the word at location addr in the USER area. */
 	case PTRACE_PEEKUSR: {
 		struct pt_regs *regs;
-		union fpureg *fregs;
 		unsigned int tmp;
 
 		regs = task_pt_regs(child);
@@ -91,23 +90,21 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 			tmp = regs->regs[addr];
 			break;
 		case FPR_BASE ... FPR_BASE + 31:
-			if (!tsk_used_math(child)) {
-				/* FP not yet used */
-				tmp = -1;
-				break;
-			}
-			fregs = get_fpu_regs(child);
-			if (!test_thread_local_flags(LTIF_FPU_FR)) {
+			if (tsk_used_math(child)) {
+				fpureg_t *fregs = get_fpu_regs(child);
+
 				/*
 				 * The odd registers are actually the high
 				 * order bits of the values stored in the even
 				 * registers - unless we're using r2k_switch.S.
 				 */
-				tmp = get_fpr32(&fregs[(addr & ~1) - FPR_BASE],
-						addr & 1);
-				break;
+				if (addr & 1)
+					tmp = (unsigned long) (fregs[((addr & ~1) - 32)] >> 32);
+				else
+					tmp = (unsigned long) (fregs[(addr - 32)] & 0xffffffff);
+			} else {
+				tmp = -1;	/* FP not yet used  */
 			}
-			tmp = get_fpr32(&fregs[addr - FPR_BASE], 0);
 			break;
 		case PC:
 			tmp = regs->cp0_epc;
@@ -127,11 +124,46 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 		case FPC_CSR:
 			tmp = child->thread.fpu.fcr31;
 			break;
-		case FPC_EIR:
-			/* implementation / version register */
-			tmp = current_cpu_data.fpu_id;
+		case FPC_EIR: { /* implementation / version register */
+			unsigned int flags;
+#ifdef CONFIG_MIPS_MT_SMTC
+			unsigned int irqflags;
+			unsigned int mtflags;
+#endif /* CONFIG_MIPS_MT_SMTC */
+
+			preempt_disable();
+			if (!cpu_has_fpu) {
+				preempt_enable();
+				tmp = 0;
+				break;
+			}
+
+#ifdef CONFIG_MIPS_MT_SMTC
+			/* Read-modify-write of Status must be atomic */
+			local_irq_save(irqflags);
+			mtflags = dmt();
+#endif /* CONFIG_MIPS_MT_SMTC */
+
+			if (cpu_has_mipsmt) {
+				unsigned int vpflags = dvpe();
+				flags = read_c0_status();
+				__enable_fpu();
+				__asm__ __volatile__("cfc1\t%0,$0": "=r" (tmp));
+				write_c0_status(flags);
+				evpe(vpflags);
+			} else {
+				flags = read_c0_status();
+				__enable_fpu();
+				__asm__ __volatile__("cfc1\t%0,$0": "=r" (tmp));
+				write_c0_status(flags);
+			}
+#ifdef CONFIG_MIPS_MT_SMTC
+			emt(mtflags);
+			local_irq_restore(irqflags);
+#endif /* CONFIG_MIPS_MT_SMTC */
+			preempt_enable();
 			break;
-#ifndef CONFIG_CPU_MIPSR6
+		}
 		case DSP_BASE ... DSP_BASE + 5: {
 			dspreg_t *dregs;
 
@@ -152,7 +184,6 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 			}
 			tmp = child->thread.dsp.dspcontrol;
 			break;
-#endif
 		default:
 			tmp = 0;
 			ret = -EIO;
@@ -197,21 +228,28 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 			regs->regs[addr] = data;
 			break;
 		case FPR_BASE ... FPR_BASE + 31: {
-			union fpureg *fregs = get_fpu_regs(child);
+			fpureg_t *fregs = get_fpu_regs(child);
 
-			init_fp_ctx(child);
-
-			if (!test_thread_local_flags(LTIF_FPU_FR)) {
-				/*
-				 * The odd registers are actually the high
-				 * order bits of the values stored in the even
-				 * registers - unless we're using r2k_switch.S.
-				 */
-				set_fpr32(&fregs[(addr & ~1) - FPR_BASE],
-					  addr & 1, data);
-				break;
+			if (!tsk_used_math(child)) {
+				/* FP not yet used  */
+				memset(&child->thread.fpu, ~0,
+				       sizeof(child->thread.fpu));
+				child->thread.fpu.fcr31 = 0;
 			}
-			set_fpr64(&fregs[addr - FPR_BASE], 0, data);
+			/*
+			 * The odd registers are actually the high order bits
+			 * of the values stored in the even registers - unless
+			 * we're using r2k_switch.S.
+			 */
+			if (addr & 1) {
+				fregs[(addr & ~1) - FPR_BASE] &= 0xffffffff;
+				fregs[(addr & ~1) - FPR_BASE] |= ((unsigned long long) data) << 32;
+			} else {
+				fregs[addr - FPR_BASE] &= ~0xffffffffLL;
+				/* Must cast, lest sign extension fill upper
+				   bits!  */
+				fregs[addr - FPR_BASE] |= (unsigned int)data;
+			}
 			break;
 		}
 		case PC:
@@ -226,7 +264,6 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 		case FPC_CSR:
 			child->thread.fpu.fcr31 = data;
 			break;
-#ifndef CONFIG_CPU_MIPSR6
 		case DSP_BASE ... DSP_BASE + 5: {
 			dspreg_t *dregs;
 
@@ -246,7 +283,6 @@ long compat_arch_ptrace(struct task_struct *child, compat_long_t request,
 			}
 			child->thread.dsp.dspcontrol = data;
 			break;
-#endif
 		default:
 			/* The rest are not allowed. */
 			ret = -EIO;

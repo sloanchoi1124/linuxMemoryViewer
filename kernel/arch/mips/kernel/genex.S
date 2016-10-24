@@ -67,8 +67,8 @@ NESTED(except_vec3_generic, 0, sp)
  */
 NESTED(except_vec3_r4000, 0, sp)
 	.set	push
-	.set    mips3
-	.set    noat
+	.set	mips3
+	.set	noat
 	mfc0	k1, CP0_CAUSE
 	li	k0, 31<<2
 	andi	k1, k1, 0x7c
@@ -139,16 +139,12 @@ LEAF(__r4k_wait)
 	nop
 	nop
 #endif
-#ifdef CONFIG_CPU_MIPSR6
-	.set    mips64r6
-#else
 	.set	mips3
-#endif
 	wait
 	/* end of rollback region (the region size must be power of two) */
 1:
 	jr	ra
-	 nop
+	nop
 	.set	pop
 	END(__r4k_wait)
 
@@ -194,11 +190,8 @@ NESTED(handle_int, PT_SIZE, sp)
 #else
 	and	k0, ST0_IE
 	bnez	k0, 1f
-#ifdef CONFIG_CPU_MIPSR6
-	eretnc
-#else
+
 	eret
-#endif
 #endif
 1:
 	.set pop
@@ -381,33 +374,12 @@ NESTED(except_vec_nmi, 0, sp)
 NESTED(nmi_handler, PT_SIZE, sp)
 	.set	push
 	.set	noat
-		/* Clear ERL - restore segment mapping */
-		mfc0	k0, CP0_STATUS
-		ori     k0, k0, ST0_EXL
-		lui     k1, 0xffff & ~(ST0_BEV>>16)
-		ori     k1, k1, 0xffff & ~(ST0_ERL)
-		and     k0, k0, k1
-		mtc0    k0, CP0_STATUS
-		ehb
 	SAVE_ALL
 	move	a0, sp
 	jal	nmi_exception_handler
 	RESTORE_ALL
-		/* Set ERL and clear EXL|NMI */
-		mfc0	k0, CP0_STATUS
-		ori     k0, k0, ST0_ERL
-		lui     k1, 0xffff & ~(ST0_NMI>>16)
-		ori     k1, k1, 0xffff & ~(ST0_EXL)
-		and     k0, k0, k1
-		mtc0    k0, CP0_STATUS
-		ehb
-#ifdef CONFIG_CPU_MIPSR6
-	.set    mips64r6
-	eretnc
-#else
 	.set	mips3
 	eret
-#endif
 	.set	pop
 	END(nmi_handler)
 
@@ -428,21 +400,11 @@ NESTED(nmi_handler, PT_SIZE, sp)
 	.set	push
 	/* gas fails to assemble cfc1 for some archs (octeon).*/ \
 	.set	mips1
-	SET_HARDFLOAT
 	cfc1	a1, fcr31
 	li	a2, ~(0x3f << 12)
 	and	a2, a1
 	ctc1	a2, fcr31
 	.set	pop
-	TRACE_IRQS_ON
-	STI
-	.endm
-
-	.macro	__build_clear_msa_fpe
-	_cfcmsa	a1, MSA_CSR
-	li	a2, ~(0x3f << 12)
-	and	a1, a1, a2
-	_ctcmsa	MSA_CSR, a1
 	TRACE_IRQS_ON
 	STI
 	.endm
@@ -505,10 +467,7 @@ NESTED(nmi_handler, PT_SIZE, sp)
 	BUILD_HANDLER cpu cpu sti silent		/* #11 */
 	BUILD_HANDLER ov ov sti silent			/* #12 */
 	BUILD_HANDLER tr tr sti silent			/* #13 */
-	BUILD_HANDLER msa_fpe msa_fpe msa_fpe silent	/* #14 */
 	BUILD_HANDLER fpe fpe fpe silent		/* #15 */
-	BUILD_HANDLER ftlb ftlb none silent		/* #16 */
-	BUILD_HANDLER msa msa sti silent		/* #21 */
 	BUILD_HANDLER mdmx mdmx sti silent		/* #22 */
 #ifdef	CONFIG_HARDWARE_WATCHPOINTS
 	/*
@@ -607,19 +566,14 @@ isrdhwr:
 	ori	k1, _THREAD_MASK
 	xori	k1, _THREAD_MASK
 	LONG_L	v1, TI_TP_VALUE(k1)
-#ifdef CONFIG_CPU_MIPSR6
-	.set    mips64r6
-	eretnc
-#else
 	.set	mips3
 	eret
-#endif
 	.set	mips0
 #endif
 	.set	pop
 	END(handle_ri_rdhwr)
 
-#if defined(CONFIG_64BIT) && !defined(CONFIG_CPU_MIPSR6)
+#ifdef CONFIG_64BIT
 /* A temporary overflow handler used by check_daddi(). */
 
 	__INIT

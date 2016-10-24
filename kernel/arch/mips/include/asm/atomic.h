@@ -63,34 +63,16 @@ static __inline__ void atomic_add(int i, atomic_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		int temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register int temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %2, %1                          \n"
-#else
-			"       la      %2, %1                          \n"
-#endif
-			"       ll      %0, 0(%2)       # atomic_add    \n"
-			"       addu    %0, %3                          \n"
-			"       sc      %0, 0(%2)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (temp), "+m" (v->counter), "=&r" (temp2)
-			: "Ir" (i));
-#else
-			"       .set    mips3                           \n"
-			"       ll      %0, %1          # atomic_add    \n"
+			"	.set	mips3				\n"
+			"	ll	%0, %1		# atomic_add	\n"
 			"	addu	%0, %2				\n"
 			"	sc	%0, %1				\n"
 			"	.set	mips0				\n"
 			: "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!temp));
 	} else {
 		unsigned long flags;
@@ -124,34 +106,16 @@ static __inline__ void atomic_sub(int i, atomic_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		int temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register int temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %2, %1                          \n"
-#else
-			"       la      %2, %1                          \n"
-#endif
-			"       ll      %0, 0(%2)       # atomic_sub    \n"
-			"       subu    %0, %3                          \n"
-			"       sc      %0, 0(%2)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (temp), "+m" (v->counter), "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
-			"       ll      %0, %1          # atomic_sub    \n"
+			"	ll	%0, %1		# atomic_sub	\n"
 			"	subu	%0, %2				\n"
 			"	sc	%0, %1				\n"
 			"	.set	mips0				\n"
 			: "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!temp));
 	} else {
 		unsigned long flags;
@@ -186,35 +150,16 @@ static __inline__ int atomic_add_return(int i, atomic_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		int temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register int temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %3, %2                          \n"
-#else
-			"       la      %3, %2                          \n"
-#endif
-			"       ll      %1, 0(%3) # atomic_add_return   \n"
-			"       addu    %0, %1, %4                      \n"
-			"       sc      %0, 0(%3)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-			  "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
-			"       ll      %1, %2  # atomic_add_return     \n"
-			"       addu    %0, %1, %3                      \n"
+			"	ll	%1, %2	# atomic_add_return	\n"
+			"	addu	%0, %1, %3			\n"
 			"	sc	%0, %2				\n"
 			"	.set	mips0				\n"
 			: "=&r" (result), "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!result));
 
 		result = temp + i;
@@ -257,35 +202,16 @@ static __inline__ int atomic_sub_return(int i, atomic_t * v)
 		result = temp - i;
 	} else if (kernel_uses_llsc) {
 		int temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register int temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %3, %2                          \n"
-#else
-			"       la      %3, %2                          \n"
-#endif
-			"       ll      %1, 0(%3) # atomic_sub_return   \n"
-			"       subu    %0, %1, %4                      \n"
-			"       sc      %0, 0(%3)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-			  "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
-			"       ll      %1, %2  # atomic_sub_return     \n"
+			"	ll	%1, %2	# atomic_sub_return	\n"
 			"	subu	%0, %1, %3			\n"
 			"	sc	%0, %2				\n"
 			"	.set	mips0				\n"
 			: "=&r" (result), "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!result));
 
 		result = temp - i;
@@ -338,34 +264,10 @@ static __inline__ int atomic_sub_if_positive(int i, atomic_t * v)
 		: "memory");
 	} else if (kernel_uses_llsc) {
 		int temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register int temp2;
-#endif
 
 		__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-		"       .set    mips64r6                                \n"
-#ifdef CONFIG_64BIT
-		"       dla     %3, %2                                  \n"
-#else
-		"       la      %3, %2                                  \n"
-#endif
-		"1:     ll      %1, 0(%3)      # atomic_sub_if_positive \n"
-		"       subu    %0, %1, %4                              \n"
-		"	bltz	%0, 1f					\n"
-		"       sc      %0, 0(%3)                               \n"
-		"	.set	noreorder				\n"
-		"	beqz	%0, 1b					\n"
-		"        subu   %0, %1, %4                              \n"
-		"	.set	reorder					\n"
-		"1:							\n"
-		"	.set	mips0					\n"
-		: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-		  "=&r" (temp2)
-		: "Ir" (i));
-#else
 		"	.set	mips3					\n"
-		"1:     ll      %1, %2          # atomic_sub_if_positive\n"
+		"1:	ll	%1, %2		# atomic_sub_if_positive\n"
 		"	subu	%0, %1, %3				\n"
 		"	bltz	%0, 1f					\n"
 		"	sc	%0, %2					\n"
@@ -377,7 +279,6 @@ static __inline__ int atomic_sub_if_positive(int i, atomic_t * v)
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "+m" (v->counter)
 		: "Ir" (i));
-#endif
 	} else {
 		unsigned long flags;
 
@@ -529,34 +430,16 @@ static __inline__ void atomic64_add(long i, atomic64_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		long temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register long temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %2, %1                          \n"
-#else
-			"       la      %2, %1                          \n"
-#endif
-			"       lld     %0, 0(%2)       # atomic64_add  \n"
-			"       daddu   %0, %3                          \n"
-			"       scd     %0, 0(%2)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (temp), "+m" (v->counter), "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
-			"       lld     %0, %1          # atomic64_add  \n"
+			"	lld	%0, %1		# atomic64_add	\n"
 			"	daddu	%0, %2				\n"
 			"	scd	%0, %1				\n"
 			"	.set	mips0				\n"
 			: "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!temp));
 	} else {
 		unsigned long flags;
@@ -590,26 +473,9 @@ static __inline__ void atomic64_sub(long i, atomic64_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		long temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register long temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %2, %1                          \n"
-#else
-			"       la      %2, %1                          \n"
-#endif
-			"       lld     %0, 0(%2)       # atomic64_sub  \n"
-			"       dsubu   %0, %3                          \n"
-			"       scd     %0, 0(%2)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (temp), "+m" (v->counter), "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
 			"	lld	%0, %1		# atomic64_sub	\n"
 			"	dsubu	%0, %2				\n"
@@ -617,7 +483,6 @@ static __inline__ void atomic64_sub(long i, atomic64_t * v)
 			"	.set	mips0				\n"
 			: "=&r" (temp), "+m" (v->counter)
 			: "Ir" (i));
-#endif
 		} while (unlikely(!temp));
 	} else {
 		unsigned long flags;
@@ -652,27 +517,9 @@ static __inline__ long atomic64_add_return(long i, atomic64_t * v)
 		: "Ir" (i));
 	} else if (kernel_uses_llsc) {
 		long temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register long temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %3, %2                          \n"
-#else
-			"       la      %3, %2                          \n"
-#endif
-			"       lld     %1, 0(%3) # atomic64_add_return \n"
-			"       daddu   %0, %1, %4                      \n"
-			"       scd     %0, 0(%3)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-			  "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
 			"	lld	%1, %2	# atomic64_add_return	\n"
 			"	daddu	%0, %1, %3			\n"
@@ -681,7 +528,6 @@ static __inline__ long atomic64_add_return(long i, atomic64_t * v)
 			: "=&r" (result), "=&r" (temp), "=m" (v->counter)
 			: "Ir" (i), "m" (v->counter)
 			: "memory");
-#endif
 		} while (unlikely(!result));
 
 		result = temp + i;
@@ -722,36 +568,17 @@ static __inline__ long atomic64_sub_return(long i, atomic64_t * v)
 		: "memory");
 	} else if (kernel_uses_llsc) {
 		long temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register long temp2;
-#endif
 
 		do {
 			__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-			"       .set    mips64r6                        \n"
-#ifdef CONFIG_64BIT
-			"       dla     %3, %2                          \n"
-#else
-			"       la      %3, %2                          \n"
-#endif
-			"       lld     %1, 0(%3) # atomic64_sub_return \n"
-			"       dsubu   %0, %1, %4                      \n"
-			"       scd     %0, 0(%3)                       \n"
-			"	.set	mips0				\n"
-			: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-			  "=&r" (temp2)
-			: "Ir" (i));
-#else
 			"	.set	mips3				\n"
-			"       lld     %1, %2  # atomic64_sub_return   \n"
+			"	lld	%1, %2	# atomic64_sub_return	\n"
 			"	dsubu	%0, %1, %3			\n"
 			"	scd	%0, %2				\n"
 			"	.set	mips0				\n"
 			: "=&r" (result), "=&r" (temp), "=m" (v->counter)
 			: "Ir" (i), "m" (v->counter)
 			: "memory");
-#endif
 		} while (unlikely(!result));
 
 		result = temp - i;
@@ -804,34 +631,10 @@ static __inline__ long atomic64_sub_if_positive(long i, atomic64_t * v)
 		: "memory");
 	} else if (kernel_uses_llsc) {
 		long temp;
-#ifdef CONFIG_CPU_MIPSR6
-		register long temp2;
-#endif
 
 		__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-		"       .set    mips64r6                                \n"
-#ifdef CONFIG_64BIT
-		"       dla     %3, %2                                  \n"
-#else
-		"       la      %3, %2                                  \n"
-#endif
-		"1:     lld     %1, 0(%3)    # atomic64_sub_if_positive \n"
-		"       dsubu   %0, %1, %4                              \n"
-		"	bltz	%0, 1f					\n"
-		"       scd     %0, 0(%3)                               \n"
-		"	.set	noreorder				\n"
-		"	beqz	%0, 1b					\n"
-		"        dsubu  %0, %1, %4                              \n"
-		"	.set	reorder					\n"
-		"1:							\n"
-		"	.set	mips0					\n"
-		: "=&r" (result), "=&r" (temp), "+m" (v->counter),
-		  "=&r" (temp2)
-		: "Ir" (i));
-#else
 		"	.set	mips3					\n"
-		"1:     lld     %1, %2          # atomic64_sub_if_positive\n"
+		"1:	lld	%1, %2		# atomic64_sub_if_positive\n"
 		"	dsubu	%0, %1, %3				\n"
 		"	bltz	%0, 1f					\n"
 		"	scd	%0, %2					\n"
@@ -843,7 +646,6 @@ static __inline__ long atomic64_sub_if_positive(long i, atomic64_t * v)
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "+m" (v->counter)
 		: "Ir" (i));
-#endif
 	} else {
 		unsigned long flags;
 

@@ -50,6 +50,11 @@ struct dma_map_ops {
 	int (*mapping_error)(struct device *dev, dma_addr_t dma_addr);
 	int (*dma_supported)(struct device *dev, u64 mask);
 	int (*set_dma_mask)(struct device *dev, u64 mask);
+	void *(*remap)(struct device *dev, void *cpu_addr,
+			dma_addr_t dma_handle, size_t size,
+			struct dma_attrs *attrs);
+	void (*unremap)(struct device *dev, void *remapped_address,
+			size_t size);
 #ifdef ARCH_HAS_DMA_GET_REQUIRED_MASK
 	u64 (*get_required_mask)(struct device *dev);
 #endif
@@ -78,6 +83,37 @@ static inline int is_device_dma_capable(struct device *dev)
 #include <asm-generic/dma-mapping-broken.h>
 #endif
 
+static inline void *dma_remap(struct device *dev, void *cpu_addr,
+		dma_addr_t dma_handle, size_t size, struct dma_attrs *attrs)
+{
+	const struct dma_map_ops *ops = get_dma_ops(dev);
+	BUG_ON(!ops);
+
+	if (!ops->remap) {
+		WARN_ONCE(1, "Remap function not implemented for %pS\n",
+				ops->remap);
+		return NULL;
+	}
+
+	return ops->remap(dev, cpu_addr, dma_handle, size, attrs);
+}
+
+
+static inline void dma_unremap(struct device *dev, void *remapped_addr,
+				size_t size)
+{
+	const struct dma_map_ops *ops = get_dma_ops(dev);
+	BUG_ON(!ops);
+
+	if (!ops->unremap) {
+		WARN_ONCE(1, "unremap function not implemented for %pS\n",
+				ops->unremap);
+		return;
+	}
+
+	return ops->unremap(dev, remapped_addr, size);
+}
+
 static inline u64 dma_get_mask(struct device *dev)
 {
 	if (dev && dev->dma_mask && *dev->dma_mask)
@@ -96,30 +132,6 @@ static inline int dma_set_coherent_mask(struct device *dev, u64 mask)
 	return 0;
 }
 #endif
-
-/*
- * Set both the DMA mask and the coherent DMA mask to the same thing.
- * Note that we don't check the return value from dma_set_coherent_mask()
- * as the DMA API guarantees that the coherent DMA mask can be set to
- * the same or smaller than the streaming DMA mask.
- */
-static inline int dma_set_mask_and_coherent(struct device *dev, u64 mask)
-{
-	int rc = dma_set_mask(dev, mask);
-	if (rc == 0)
-		dma_set_coherent_mask(dev, mask);
-	return rc;
-}
-
-/*
- * Similar to the above, except it deals with the case where the device
- * does not have dev->dma_mask appropriately setup.
- */
-static inline int dma_coerce_mask_and_coherent(struct device *dev, u64 mask)
-{
-	dev->dma_mask = &dev->coherent_dma_mask;
-	return dma_set_mask_and_coherent(dev, mask);
-}
 
 extern u64 dma_get_required_mask(struct device *dev);
 

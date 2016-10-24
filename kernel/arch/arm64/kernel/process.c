@@ -92,13 +92,8 @@ void soft_restart(unsigned long addr)
 void (*pm_power_off)(void);
 EXPORT_SYMBOL_GPL(pm_power_off);
 
-void (*arm_pm_restart)(char str, const char *cmd);
+void (*arm_pm_restart)(enum reboot_mode reboot_mode, const char *cmd);
 EXPORT_SYMBOL_GPL(arm_pm_restart);
-
-void arch_cpu_idle_prepare(void)
-{
-	local_fiq_enable();
-}
 
 /*
  * This is our default idle handler.
@@ -115,6 +110,16 @@ void arch_cpu_idle(void)
 	}
 }
 
+void arch_cpu_idle_enter(void)
+{
+	idle_notifier_call_chain(IDLE_START);
+}
+
+void arch_cpu_idle_exit(void)
+{
+	idle_notifier_call_chain(IDLE_END);
+}
+
 #ifdef CONFIG_HOTPLUG_CPU
 void arch_cpu_idle_dead(void)
 {
@@ -122,37 +127,66 @@ void arch_cpu_idle_dead(void)
 }
 #endif
 
+/*
+ * Called by kexec, immediately prior to machine_kexec().
+ *
+ * This must completely disable all secondary CPUs; simply causing those CPUs
+ * to execute e.g. a RAM-based pin loop is not sufficient. This allows the
+ * kexec'd kernel to use any and all RAM as it sees fit, without having to
+ * avoid any code or data used by any SW CPU pin loop. The CPU hotplug
+ * functionality embodied in disable_nonboot_cpus() to achieve this.
+ */
 void machine_shutdown(void)
 {
-#ifdef CONFIG_SMP
-	smp_send_stop();
-#endif
+	disable_nonboot_cpus();
 }
 
+/*
+ * Halting simply requires that the secondary CPUs stop performing any
+ * activity (executing tasks, handling interrupts). smp_send_stop()
+ * achieves this.
+ */
 void machine_halt(void)
 {
-	machine_shutdown();
+	local_irq_disable();
+	smp_send_stop();
 	while (1);
 }
 
+/*
+ * Power-off simply requires that the secondary CPUs stop performing any
+ * activity (executing tasks, handling interrupts). smp_send_stop()
+ * achieves this. When the system power is turned off, it will take all CPUs
+ * with it.
+ */
 void machine_power_off(void)
 {
-	machine_shutdown();
+	local_irq_disable();
+	smp_send_stop();
 	if (pm_power_off)
 		pm_power_off();
 }
 
+/*
+ * Restart requires that the secondary CPUs stop performing any activity
+ * while the primary CPU resets the system. Systems with a single CPU can
+ * use soft_restart() as their machine descriptor's .restart hook, since that
+ * will cause the only available CPU to reset. Systems with multiple CPUs must
+ * provide a HW restart implementation, to ensure that all CPUs reset at once.
+ * This is required so that any code running after reset on the primary CPU
+ * doesn't have to co-ordinate with other CPUs to ensure they aren't still
+ * executing pre-reset code, and using RAM that the primary CPU's code wishes
+ * to use. Implementing such co-ordination would be essentially impossible.
+ */
 void machine_restart(char *cmd)
 {
-	machine_shutdown();
-
 	/* Disable interrupts first */
 	local_irq_disable();
-	local_fiq_disable();
+	smp_send_stop();
 
 	/* Now call the architecture specific reboot code. */
 	if (arm_pm_restart)
-		arm_pm_restart('h', cmd);
+		arm_pm_restart(REBOOT_HARD, cmd);
 
 	/*
 	 * Whoops - the architecture was unable to reboot.
@@ -168,7 +202,7 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 {
 	int	i, j;
 	int	nlines;
-	u32	*p;
+	u64	*p;
 
 	/*
 	 * don't attempt to dump non-kernel addresses or
@@ -180,13 +214,12 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 	printk("\n%s: %#lx:\n", name, addr);
 
 	/*
-	 * round address down to a 32 bit boundary
-	 * and always dump a multiple of 32 bytes
+	 * round address down to a 64 bit boundary
+	 * and always dump a multiple of 64 bytes
 	 */
-	p = (u32 *)(addr & ~(sizeof(u32) - 1));
-	nbytes += (addr & (sizeof(u32) - 1));
-	nlines = (nbytes + 31) / 32;
-
+	p = (u64 *)(addr & ~(sizeof(u64) - 1));
+	nbytes += (addr & (sizeof(u64) - 1));
+	nlines = (nbytes + 63) / 64;
 
 	for (i = 0; i < nlines; i++) {
 		/*
@@ -195,34 +228,28 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 		 */
 		printk("%04lx ", (unsigned long)p & 0xffff);
 		for (j = 0; j < 8; j++) {
-			u32	data;
-			if (probe_kernel_address(p, data)) {
+			u64 data;
+			/*
+			 * vmalloc addresses may point to
+			 * memory-mapped peripherals
+			 */
+			if (!virt_addr_valid(p) ||
+				 probe_kernel_address(p, data)) {
 				printk(" ********");
 			} else {
-				printk(" %08x", data);
+				printk(KERN_CONT " %016llx", data);
 			}
 			++p;
 		}
-		printk("\n");
+		printk(KERN_CONT "\n");
 	}
 }
 
 static void show_extra_register_data(struct pt_regs *regs, int nbytes)
 {
-	mm_segment_t fs;
-	unsigned int i;
-
-	fs = get_fs();
-	set_fs(KERNEL_DS);
 	show_data(regs->pc - nbytes, nbytes * 2, "PC");
 	show_data(regs->regs[30] - nbytes, nbytes * 2, "LR");
 	show_data(regs->sp - nbytes, nbytes * 2, "SP");
-	for (i = 0; i < 30; i++) {
-		char name[4];
-		snprintf(name, sizeof(name), "X%u", i);
-		show_data(regs->regs[i] - nbytes, nbytes * 2, name);
-	}
-	set_fs(fs);
 }
 
 void __show_regs(struct pt_regs *regs)
@@ -251,8 +278,9 @@ void __show_regs(struct pt_regs *regs)
 		if (i % 2 == 0)
 			printk("\n");
 	}
-	if (!user_mode(regs))
-		show_extra_register_data(regs, 128);
+	/* Dump only kernel mode */
+	if (get_fs() == get_ds())
+		show_extra_register_data(regs, 256);
 	printk("\n");
 }
 

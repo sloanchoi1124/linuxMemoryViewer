@@ -18,37 +18,21 @@
 enum major_op {
 	spec_op, bcond_op, j_op, jal_op,
 	beq_op, bne_op, blez_op, bgtz_op,
-#ifndef CONFIG_CPU_MIPSR6
 	addi_op, addiu_op, slti_op, sltiu_op,
-#else
-	cbcond0_op, addiu_op, slti_op, sltiu_op,
-#endif
 	andi_op, ori_op, xori_op, lui_op,
 	cop0_op, cop1_op, cop2_op, cop1x_op,
 	beql_op, bnel_op, blezl_op, bgtzl_op,
-#ifndef CONFIG_CPU_MIPSR6
 	daddi_op, daddiu_op, ldl_op, ldr_op,
-#else
-	cbcond1_op, daddiu_op, ldl_op, ldr_op,
-#endif
 	spec2_op, jalx_op, mdmx_op, spec3_op,
 	lb_op, lh_op, lwl_op, lw_op,
 	lbu_op, lhu_op, lwr_op, lwu_op,
 	sb_op, sh_op, swl_op, sw_op,
 	sdl_op, sdr_op, swr_op, cache_op,
-#ifndef CONFIG_CPU_MIPSR6
 	ll_op, lwc1_op, lwc2_op, pref_op,
 	lld_op, ldc1_op, ldc2_op, ld_op,
 	sc_op, swc1_op, swc2_op, major_3b_op,
 	scd_op, sdc1_op, sdc2_op, sd_op
-#else
-	ll_op, lwc1_op, bc_op, pref_op,
-	lld_op, ldc1_op, jump_op, ld_op,
-	sc_op, swc1_op, balc_op, pcrel_op,
-	scd_op, sdc1_op, jump2_op, sd_op
-#endif
 };
-#define msa_op  mdmx_op
 
 /*
  * func field of spec opcode.
@@ -90,19 +74,8 @@ enum spec3_op {
 	ext_op, dextm_op, dextu_op, dext_op,
 	ins_op, dinsm_op, dinsu_op, dins_op,
 	lx_op = 0x0a,
-	lwle_op = 0x19,
-	lwre_op = 0x1a, cachee_op = 0x1b,
-	sbe_op = 0x1c, she_op = 0x1d,
-	sce_op = 0x1e, swe_op = 0x1f,
-	bshfl_op = 0x20, swle_op = 0x21,
-	swre_op = 0x22, prefe_op = 0x23,
-	dbshfl_op = 0x24, cache6_op = 0x25,
-	sc6_op = 0x26, scd6_op = 0x27,
-	lbue_op = 0x28, lhue_op = 0x29,
-	lbe_op = 0x2c, lhe_op = 0x2d,
-	lle_op = 0x2e, lwe_op = 0x2f,
-	pref6_op = 0x35, ll6_op = 0x36,
-	lld6_op = 0x37,
+	bshfl_op = 0x20,
+	dbshfl_op = 0x24,
 	rdhwr_op = 0x3b
 };
 
@@ -125,16 +98,14 @@ enum rt_op {
  */
 enum cop_op {
 	mfc_op	      = 0x00, dmfc_op	    = 0x01,
-	cfc_op	      = 0x02, mfhc_op	    = 0x03,
-	mtc_op        = 0x04, dmtc_op	    = 0x05,
-	ctc_op	      = 0x06, mthc_op	    = 0x07,
-	rs_bc_op      = 0x08, bc1eqz_op     = 0x09,
-	bc1nez_op     = 0x0d, cop_op        = 0x10,
+	cfc_op	      = 0x02, mtc_op	    = 0x04,
+	dmtc_op	      = 0x05, ctc_op	    = 0x06,
+	bc_op	      = 0x08, cop_op	    = 0x10,
 	copm_op	      = 0x18
 };
 
 /*
- * rt field of cop.rs_bc_op opcodes
+ * rt field of cop.bc_op opcodes
  */
 enum bcop_op {
 	bcf_op, bct_op, bcfl_op, bctl_op
@@ -178,16 +149,9 @@ enum cop1_sdw_func {
 	fceill_op    =	0x0a, ffloorl_op   =  0x0b,
 	fround_op    =	0x0c, ftrunc_op	   =  0x0d,
 	fceil_op     =	0x0e, ffloor_op	   =  0x0f,
-	fsel_op      =  0x10,
 	fmovc_op     =	0x11, fmovz_op	   =  0x12,
-	fmovn_op     =  0x13, fseleqz_op   =  0x14,
-	frecip_op    =  0x15, frsqrt_op    =  0x16,
-	fselnez_op   =  0x17,
-	fmaddf_op    =  0x18, fmsubf_op    =  0x19,
-	frint_op     =  0x1a, fclass_op    =  0x1b,
-	fmin_op      =  0x1c, fmina_op     =  0x1d,
-	fmax_op      =  0x1e, fmaxa_op     =  0x1f,
-	fcvts_op     =  0x20,
+	fmovn_op     =	0x13, frecip_op	   =  0x15,
+	frsqrt_op    =	0x16, fcvts_op	   =  0x20,
 	fcvtd_op     =	0x21, fcvte_op	   =  0x22,
 	fcvtw_op     =	0x24, fcvtl_op	   =  0x25,
 	fcmp_op	     =	0x30
@@ -198,8 +162,8 @@ enum cop1_sdw_func {
  */
 enum cop1x_func {
 	lwxc1_op     =	0x00, ldxc1_op	   =  0x01,
-	swxc1_op     =  0x08, sdxc1_op	   =  0x09,
-	pfetch_op    =	0x0f, madd_s_op	   =  0x20,
+	pfetch_op    =	0x07, swxc1_op	   =  0x08,
+	sdxc1_op     =	0x09, madd_s_op	   =  0x20,
 	madd_d_op    =	0x21, madd_e_op	   =  0x22,
 	msub_s_op    =	0x28, msub_d_op	   =  0x29,
 	msub_e_op    =	0x2a, nmadd_s_op   =  0x30,
@@ -227,25 +191,6 @@ enum lx_func {
 	lwux_op = 0x10,
 	lhux_op = 0x14,
 	lbx_op	= 0x16,
-};
-
-/*
- * func field for MSA MI10 format
- */
-enum msa_mi10_func {
-	msa_ld_op = 8,
-	msa_st_op = 9,
-};
-
-enum relpc_op {
-	addiupc_op  = 0,
-	lwpc_op     = 1,
-	lwupc_op    = 2,
-};
-
-enum relpc_func {
-	auipc_func  = 6,
-	aluipc_func = 7,
 };
 
 /*
@@ -593,25 +538,6 @@ struct p_format {		/* Performance counter format (R10000) */
 	;))))))
 };
 
-struct dsp_format {		/* SPEC3 DSP format instructions */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(unsigned int base : 5,
-	BITFIELD_FIELD(unsigned int index : 5,
-	BITFIELD_FIELD(unsigned int rd : 5,
-	BITFIELD_FIELD(unsigned int op : 5,
-	BITFIELD_FIELD(unsigned int func : 6,
-	;))))))
-};
-
-struct spec3_format {   /* SPEC3 */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(unsigned int rs : 5,
-	BITFIELD_FIELD(unsigned int rt : 5,
-	BITFIELD_FIELD(signed int simmediate : 9,
-	BITFIELD_FIELD(unsigned int ls_func : 7,
-	;)))))
-};
-
 struct f_format {			/* FPU register format */
 	BITFIELD_FIELD(unsigned int opcode : 6,
 	BITFIELD_FIELD(unsigned int : 1,
@@ -660,42 +586,6 @@ struct v_format {				/* MDMX vector format */
 	BITFIELD_FIELD(unsigned int vd : 5,
 	BITFIELD_FIELD(unsigned int func : 6,
 	;)))))))
-};
-
-struct msa_mi10_format {        /* MSA */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(signed int s10 : 10,
-	BITFIELD_FIELD(unsigned int rs : 5,
-	BITFIELD_FIELD(unsigned int wd : 5,
-	BITFIELD_FIELD(unsigned int func : 4,
-	BITFIELD_FIELD(unsigned int df : 2,
-	;))))))
-};
-
-struct rel_format {        /* PC-relative */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(unsigned int rs : 5,
-	BITFIELD_FIELD(unsigned int op : 2,
-	BITFIELD_FIELD(signed int simmediate : 19,
-	;))))
-};
-
-struct rl16_format {        /* PC-relative, 16bit offset */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(unsigned int rs : 5,
-	BITFIELD_FIELD(unsigned int op : 2,
-	BITFIELD_FIELD(unsigned int func : 3,
-	BITFIELD_FIELD(signed int simmediate : 16,
-	;)))))
-};
-
-struct rl18_format {        /* PC-relative, 18bit offset */
-	BITFIELD_FIELD(unsigned int opcode : 6,
-	BITFIELD_FIELD(unsigned int rs : 5,
-	BITFIELD_FIELD(unsigned int op : 2,
-	BITFIELD_FIELD(unsigned int unused : 1,
-	BITFIELD_FIELD(signed int simmediate : 18,
-	;)))))
 };
 
 /*
@@ -964,14 +854,8 @@ union mips_instruction {
 	struct c_format c_format;
 	struct r_format r_format;
 	struct p_format p_format;
-	struct dsp_format dsp_format;
-	struct spec3_format spec3_format;
 	struct f_format f_format;
 	struct ma_format ma_format;
-	struct msa_mi10_format msa_mi10_format;
-	struct rel_format rel_format;
-	struct rl16_format rl16_format;
-	struct rl18_format rl18_format;
 	struct b_format b_format;
 	struct ps_format ps_format;
 	struct v_format v_format;

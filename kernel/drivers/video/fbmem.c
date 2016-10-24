@@ -32,13 +32,36 @@
 #include <linux/device.h>
 #include <linux/efi.h>
 #include <linux/fb.h>
-
+/* Difference synchronization to 8939-FEIMA-M-GP between LCD module 8939-L-GP and 8939-FEIMA-M-GP . */
+/*open tp gesture can't wake up screen probability*/
+#include <linux/hw_lcd_common.h>
+#ifdef CONFIG_LOG_JANK
+#include <linux/log_jank.h>
+#endif
 #include <asm/fb.h>
 
+   extern unsigned int cpufreq_get(unsigned int cpu);
 
     /*
      *  Frame buffer device initialization and setup routines
      */
+#ifdef CONFIG_HUAWEI_LCD
+extern int lcd_debug_mask ;
+
+#define LCD_INFO 2
+
+#ifndef LCD_LOG_INFO
+#define LCD_LOG_INFO( x...)					\
+do{											\
+	if( lcd_debug_mask >= LCD_INFO )		\
+	{										\
+		printk(KERN_ERR "[LCD_INFO] " x);	\
+	}										\
+											\
+}while(0)
+#endif
+#endif
+
 
 #define FBPIXMAPSIZE	(1024 * 8)
 
@@ -1048,20 +1071,57 @@ fb_blank(struct fb_info *info, int blank)
 {	
 	struct fb_event event;
 	int ret = -EINVAL, early_ret;
+	/* Difference synchronization to 8939-FEIMA-M-GP between LCD module 8939-L-GP and 8939-FEIMA-M-GP . */
+	/*open tp gesture can't wake up screen probability*/
+	int tp_gesture_info = 0;
+	bool ath_tp_reset = 0;
+	unsigned long timeout ;
+#ifdef CONFIG_HUAWEI_LCD
+	LCD_LOG_INFO("Enter %s, blank_mode = [%d].\n",__func__,blank);
+#endif
 
  	if (blank > FB_BLANK_POWERDOWN)
  		blank = FB_BLANK_POWERDOWN;
+#ifdef CONFIG_LOG_JANK
+    if(blank > 0)
+    {
+        LOG_JANK_V(JLID_HWC_LCD_BLANK_START, "%s", "JL_HWC_LCD_BLANK_START");
+    }
+    else
+    {
+        LOG_JANK_V(JLID_HWC_LCD_UNBLANK_START, "%s", "JL_HWC_LCD_UNBLANK_START");
+    }
+#endif
 
 	event.info = info;
 	event.data = &blank;
-
+	/* Difference synchronization to 8939-FEIMA-M-GP between LCD module 8939-L-GP and 8939-FEIMA-M-GP . */
+	/*open tp gesture can't wake up screen probability*/
+	tp_gesture_info= get_tp_gesture_enable_status();
+	ath_tp_reset = get_tp_reset_enable();
 	early_ret = fb_notifier_call_chain(FB_EARLY_EVENT_BLANK, &event);
-
+	/*if lcd module is jdi-nt35695-5p2-1080p-cmd for ATH
+	set tp callback function before lcd when open tp gesture
+	to wake up screen*/
+	if(tp_gesture_info && blank == FB_BLANK_UNBLANK&&ath_tp_reset)
+	{
+		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+		LCD_LOG_INFO("%s:open tp_gesture and put tp in front of lcd.\n",__func__);
+	}
+	timeout = jiffies ;
 	if (info->fbops->fb_blank)
  		ret = info->fbops->fb_blank(blank, info);
-
+	/* add for timeout print log */
+	/*delete cpuget() to avoid panic*/
+	LCD_LOG_INFO("%s: fb blank time = %u\n",
+			__func__,jiffies_to_msecs(jiffies-timeout));
+	/* Difference synchronization to 8939-FEIMA-M-GP between LCD module 8939-L-GP and 8939-FEIMA-M-GP . */
+	/*open tp gesture can't wake up screen probability*/
 	if (!ret)
-		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+	{
+		if (!ath_tp_reset||!tp_gesture_info || blank != FB_BLANK_UNBLANK)
+			fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+	}
 	else {
 		/*
 		 * if fb_blank is failed then revert effects of
@@ -1070,7 +1130,19 @@ fb_blank(struct fb_info *info, int blank)
 		if (!early_ret)
 			fb_notifier_call_chain(FB_R_EARLY_EVENT_BLANK, &event);
 	}
-
+#ifdef CONFIG_HUAWEI_LCD
+	LCD_LOG_INFO("Exit %s, blank_mode = [%d].\n",__func__,blank);
+#endif
+#ifdef CONFIG_LOG_JANK
+    if(blank > 0)
+    {
+        LOG_JANK_V(JLID_HWC_LCD_BLANK_END, "%s", "JL_HWC_LCD_BLANK_END");
+    }
+    else
+    {
+        LOG_JANK_V(JLID_HWC_LCD_UNBLANK_END, "%s", "JL_HWC_LCD_UNBLANK_END");
+    }
+#endif
  	return ret;
 }
 
@@ -1122,6 +1194,10 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (copy_from_user(&cmap, argp, sizeof(cmap)))
 			return -EFAULT;
 		ret = fb_set_user_cmap(&cmap, info);
+		if (ret) {
+			if (info)
+				fb_dealloc_cmap(&info->cmap);
+		}
 		break;
 	case FBIOGETCMAP:
 		if (copy_from_user(&cmap, argp, sizeof(cmap)))
@@ -1194,14 +1270,11 @@ static long do_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		unlock_fb_info(info);
 		break;
 	default:
-		if (!lock_fb_info(info))
-			return -ENODEV;
 		fb = info->fbops;
 		if (fb->fb_ioctl)
 			ret = fb->fb_ioctl(info, cmd, arg);
 		else
 			ret = -ENOTTY;
-		unlock_fb_info(info);
 	}
 	return ret;
 }
@@ -1440,6 +1513,7 @@ __releases(&info->lock)
 		goto out;
 	}
 	file->private_data = info;
+	info->file = file;
 	if (info->fbops->fb_open) {
 		res = info->fbops->fb_open(info,1);
 		if (res)
@@ -1464,6 +1538,7 @@ __releases(&info->lock)
 	struct fb_info * const info = file->private_data;
 
 	mutex_lock(&info->lock);
+	info->file = file;
 	if (info->fbops->fb_release)
 		info->fbops->fb_release(info,1);
 	module_put(info->fbops->owner);

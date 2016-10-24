@@ -22,6 +22,5 @@ struct device_node;
 extern int mips_cpu_intc_init(struct device_node *of_node,
 			      struct device_node *parent);
 #endif
-extern unsigned mips_smp_c0_status_mask;
 
 #endif /* _ASM_IRQ_CPU_H */

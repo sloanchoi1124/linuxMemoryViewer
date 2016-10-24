@@ -10,7 +10,7 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/syscore_ops.h>
-#include <linux/wakeup_reason.h>
+
 #include "internals.h"
 
 /**
@@ -45,12 +45,12 @@ static void resume_irqs(bool want_early)
 	struct irq_desc *desc;
 	int irq;
 
-	for_each_irq_desc(irq, desc) {
+	for_each_irq_desc_reverse(irq, desc) {
 		unsigned long flags;
 		bool is_early = desc->action &&
 			desc->action->flags & IRQF_EARLY_RESUME;
 
-		if (is_early != want_early)
+		if (!is_early && want_early)
 			continue;
 
 		raw_spin_lock_irqsave(&desc->lock, flags);
@@ -105,10 +105,6 @@ int check_wakeup_irqs(void)
 	for_each_irq_desc(irq, desc) {
 		if (irqd_is_wakeup_set(&desc->irq_data)) {
 			if (desc->istate & IRQS_PENDING) {
-				log_suspend_abort_reason("Wakeup IRQ %d %s pending",
-					irq,
-					desc->action && desc->action->name ?
-					desc->action->name : "");
 				pr_info("Wakeup IRQ %d %s pending, suspend aborted\n",
 					irq,
 					desc->action && desc->action->name ?

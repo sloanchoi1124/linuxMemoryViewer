@@ -22,8 +22,7 @@
 #include <linux/module.h>
 #include <linux/syscalls.h>
 #include <linux/uaccess.h>
-
-#include "sw_sync.h"
+#include <linux/sw_sync.h>
 
 static int sw_sync_cmp(u32 a, u32 b)
 {
@@ -97,7 +96,6 @@ static void sw_sync_pt_value_str(struct sync_pt *sync_pt,
 				       char *str, int size)
 {
 	struct sw_sync_pt *pt = (struct sw_sync_pt *)sync_pt;
-
 	snprintf(str, size, "%d", pt->value);
 }
 
@@ -157,7 +155,6 @@ static int sw_sync_open(struct inode *inode, struct file *file)
 static int sw_sync_release(struct inode *inode, struct file *file)
 {
 	struct sw_sync_timeline *obj = file->private_data;
-
 	sync_timeline_destroy(&obj->obj);
 	return 0;
 }

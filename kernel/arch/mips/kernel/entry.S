@@ -129,20 +129,6 @@ restore_all:				# restore full frame
 	RESTORE_AT
 	RESTORE_STATIC
 restore_partial:		# restore partial frame
-	LONG_L  v0, PT_STATUS(sp)               # returning to kernel mode?
-	andi    v0, v0, KU_USER
-	beqz    v0, 3f
-	LONG_L  v0, TI_FLAGS($28)
-	and     v0, _TIF_FPU_LOSE_REQUEST
-	beqz    v0, 3f
-	SAVE_STATIC
-	SAVE_AT
-	SAVE_TEMP
-	jal     mips_lose_fpu
-	RESTORE_TEMP
-	RESTORE_AT
-	RESTORE_STATIC
-3:
 #ifdef CONFIG_TRACE_IRQFLAGS
 	SAVE_STATIC
 	SAVE_AT
@@ -210,28 +196,17 @@ syscall_exit_work:
 	jal	syscall_trace_leave
 	b	resume_userspace
 
-#if defined(CONFIG_CPU_MIPSR2) || defined(CONFIG_CPU_MIPSR6) || defined(CONFIG_MIPS_MT)
+#if defined(CONFIG_CPU_MIPSR2) || defined(CONFIG_MIPS_MT)
 
 /*
  * MIPS32R2 Instruction Hazard Barrier - must be called
  *
  * For C code use the inline version named instruction_hazard().
  */
-#ifdef CONFIG_EVA
-	.align  8
-#endif
 LEAF(mips_ihb)
-#ifdef CONFIG_CPU_MIPSR6
-	.set    mips64r6
-#else
-	.set    mips32r2
-#endif
+	.set	mips32r2
 	jr.hb	ra
 	nop
-	.set    mips0
-#ifdef CONFIG_EVA
-	.align  8
-#endif
 	END(mips_ihb)
 
-#endif /* CONFIG_CPU_MIPSR2 or CONFIG_CPU_MIPSR6 or CONFIG_MIPS_MT */
+#endif /* CONFIG_CPU_MIPSR2 or CONFIG_MIPS_MT */

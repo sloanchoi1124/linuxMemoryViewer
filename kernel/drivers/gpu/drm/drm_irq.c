@@ -158,7 +158,7 @@ static void vblank_disable_and_save(struct drm_device *dev, int crtc)
 	 */
 	if ((vblrc > 0) && (abs64(diff_ns) > 1000000)) {
 		atomic_inc(&dev->_vblank_count[crtc]);
-		smp_mb__after_atomic_inc();
+		smp_mb__after_atomic();
 	}
 
 	/* Invalidate all timestamps while vblank irq's are off. */
@@ -708,7 +708,10 @@ int drm_calc_vbltimestamp_from_scanoutpos(struct drm_device *dev, int crtc,
 	/* Subtract time delta from raw timestamp to get final
 	 * vblank_time timestamp for end of vblank.
 	 */
-	etime = ktime_sub_ns(etime, delta_ns);
+	if (delta_ns < 0)
+		etime = ktime_add_ns(etime, -delta_ns);
+	else
+		etime = ktime_sub_ns(etime, delta_ns);
 	*vblank_time = ktime_to_timeval(etime);
 
 	DRM_DEBUG("crtc %d : v %d p(%d,%d)@ %ld.%ld -> %ld.%ld [e %d us, %d rep]\n",
@@ -933,7 +936,7 @@ static void drm_update_vblank_count(struct drm_device *dev, int crtc)
 
 	smp_mb__before_atomic_inc();
 	atomic_add(diff, &dev->_vblank_count[crtc]);
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 }
 
 /**
@@ -1399,7 +1402,7 @@ bool drm_handle_vblank(struct drm_device *dev, int crtc)
 		 */
 		smp_mb__before_atomic_inc();
 		atomic_inc(&dev->_vblank_count[crtc]);
-		smp_mb__after_atomic_inc();
+		smp_mb__after_atomic();
 	} else {
 		DRM_DEBUG("crtc %d: Redundant vblirq ignored. diff_ns = %d\n",
 			  crtc, (int) diff_ns);

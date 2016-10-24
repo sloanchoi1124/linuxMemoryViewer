@@ -46,6 +46,9 @@ static void sdcardfs_put_super(struct super_block *sb)
 	sdcardfs_set_lower_super(sb, NULL);
 	atomic_dec(&s->s_active);
 
+	if(spd->pkgl_id)
+		packagelist_destroy(spd->pkgl_id);
+
 	kfree(spd);
 	sb->s_fs_info = NULL;
 }
@@ -90,7 +93,8 @@ static int sdcardfs_statfs(struct dentry *dentry, struct kstatfs *buf)
  * @flags: numeric mount options
  * @options: mount options string
  */
-static int sdcardfs_remount_fs(struct super_block *sb, int *flags, char *options)
+static int sdcardfs_remount_fs(struct super_block *sb,
+			int *flags, char *options)
 {
 	int err = 0;
 
@@ -154,6 +158,7 @@ static void init_once(void *obj)
 {
 	struct sdcardfs_inode_info *i = obj;
 
+	i->under_android = false;
 	inode_init_once(&i->vfs_inode);
 }
 
@@ -199,12 +204,6 @@ static int sdcardfs_show_options(struct seq_file *m, struct dentry *root)
 		seq_printf(m, ",uid=%u", opts->fs_low_uid);
 	if (opts->fs_low_gid != 0)
 		seq_printf(m, ",gid=%u", opts->fs_low_gid);
-
-	if (opts->multiuser)
-		seq_printf(m, ",multiuser");
-
-	if (opts->reserved_mb != 0)
-		seq_printf(m, ",reserved=%uMB", opts->reserved_mb);
 
 	return 0;
 };

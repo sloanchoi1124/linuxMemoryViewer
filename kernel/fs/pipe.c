@@ -401,7 +401,6 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 			void *addr;
 			size_t chars = buf->len, remaining;
 			int error, atomic;
-			int offset;
 
 			if (chars > total_len)
 				chars = total_len;
@@ -415,10 +414,9 @@ pipe_read(struct kiocb *iocb, const struct iovec *_iov,
 
 			atomic = !iov_fault_in_pages_write(iov, chars);
 			remaining = chars;
-			offset = buf->offset;
 redo:
 			addr = ops->map(pipe, buf, atomic);
-			error = pipe_iov_copy_to_user(iov, addr, &offset,
+			error = pipe_iov_copy_to_user(iov, addr, &buf->offset,
 						      &remaining, atomic);
 			ops->unmap(pipe, buf, addr);
 			if (unlikely(error)) {
@@ -434,7 +432,6 @@ redo:
 				break;
 			}
 			ret += chars;
-			buf->offset += chars;
 			buf->len -= chars;
 
 			/* Was it a packet buffer? Clean up and exit */
@@ -738,11 +735,25 @@ pipe_poll(struct file *filp, poll_table *wait)
 	return mask;
 }
 
+static void put_pipe_info(struct inode *inode, struct pipe_inode_info *pipe)
+{
+	int kill = 0;
+
+	spin_lock(&inode->i_lock);
+	if (!--pipe->files) {
+		inode->i_pipe = NULL;
+		kill = 1;
+	}
+	spin_unlock(&inode->i_lock);
+
+	if (kill)
+		free_pipe_info(pipe);
+}
+
 static int
 pipe_release(struct inode *inode, struct file *file)
 {
-	struct pipe_inode_info *pipe = inode->i_pipe;
-	int kill = 0;
+	struct pipe_inode_info *pipe = file->private_data;
 
 	__pipe_lock(pipe);
 	if (file->f_mode & FMODE_READ)
@@ -755,17 +766,9 @@ pipe_release(struct inode *inode, struct file *file)
 		kill_fasync(&pipe->fasync_readers, SIGIO, POLL_IN);
 		kill_fasync(&pipe->fasync_writers, SIGIO, POLL_OUT);
 	}
-	spin_lock(&inode->i_lock);
-	if (!--pipe->files) {
-		inode->i_pipe = NULL;
-		kill = 1;
-	}
-	spin_unlock(&inode->i_lock);
 	__pipe_unlock(pipe);
 
-	if (kill)
-		free_pipe_info(pipe);
-
+	put_pipe_info(inode, pipe);
 	return 0;
 }
 
@@ -1026,7 +1029,6 @@ static int fifo_open(struct inode *inode, struct file *filp)
 {
 	struct pipe_inode_info *pipe;
 	bool is_pipe = inode->i_sb->s_magic == PIPEFS_MAGIC;
-	int kill = 0;
 	int ret;
 
 	filp->f_version = 0;
@@ -1142,15 +1144,9 @@ err_wr:
 	goto err;
 
 err:
-	spin_lock(&inode->i_lock);
-	if (!--pipe->files) {
-		inode->i_pipe = NULL;
-		kill = 1;
-	}
-	spin_unlock(&inode->i_lock);
 	__pipe_unlock(pipe);
-	if (kill)
-		free_pipe_info(pipe);
+
+	put_pipe_info(inode, pipe);
 	return ret;
 }
 

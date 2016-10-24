@@ -1017,7 +1017,7 @@ static void vhost_scsi_handle_vq(struct vhost_scsi *vs,
 		if (data_direction != DMA_NONE) {
 			ret = vhost_scsi_map_iov_to_sgl(tv_cmd,
 					&vq->iov[data_first], data_num,
-					data_direction == DMA_TO_DEVICE);
+					data_direction == DMA_FROM_DEVICE);
 			if (unlikely(ret)) {
 				vq_err(vq, "Failed to map iov to sgl\n");
 				goto err_free;
@@ -1200,7 +1200,7 @@ static int vhost_scsi_set_endpoint(
 			tv_tpg->tv_tpg_vhost_count++;
 			tv_tpg->vhost_scsi = vs;
 			vs_tpg[tv_tpg->tport_tpgt] = tv_tpg;
-			smp_mb__after_atomic_inc();
+			smp_mb__after_atomic();
 			match = true;
 		}
 		mutex_unlock(&tv_tpg->tv_tpg_mutex);

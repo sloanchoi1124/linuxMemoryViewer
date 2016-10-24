@@ -23,14 +23,15 @@
 
 #include <asm-generic/dma-coherent.h>
 
-#define ARCH_HAS_DMA_GET_REQUIRED_MASK
+#include <xen/xen.h>
+#include <asm/xen/hypervisor.h>
 
 #define DMA_ERROR_CODE	(~(dma_addr_t)0)
-extern struct dma_map_ops *dma_ops;
-extern struct dma_map_ops coherent_swiotlb_dma_ops;
-extern struct dma_map_ops noncoherent_swiotlb_dma_ops;
+extern const struct dma_map_ops *dma_ops;
+extern const struct dma_map_ops coherent_swiotlb_dma_ops;
+extern const struct dma_map_ops noncoherent_swiotlb_dma_ops;
 
-static inline struct dma_map_ops *get_dma_ops(struct device *dev)
+static inline const struct dma_map_ops *__generic_dma_ops(struct device *dev)
 {
 	if (unlikely(!dev) || !dev->archdata.dma_ops)
 		return dma_ops;
@@ -41,6 +42,14 @@ static inline struct dma_map_ops *get_dma_ops(struct device *dev)
 static inline void set_dma_ops(struct device *dev, struct dma_map_ops *ops)
 {
 	dev->archdata.dma_ops = ops;
+}
+
+static inline const struct dma_map_ops *get_dma_ops(struct device *dev)
+{
+	if (xen_initial_domain())
+		return xen_dma_ops;
+	else
+		return __generic_dma_ops(dev);
 }
 
 #include <asm-generic/dma-mapping-common.h>
@@ -57,14 +66,14 @@ static inline phys_addr_t dma_to_phys(struct device *dev, dma_addr_t dev_addr)
 
 static inline int dma_mapping_error(struct device *dev, dma_addr_t dev_addr)
 {
-	struct dma_map_ops *ops = get_dma_ops(dev);
+	const struct dma_map_ops *ops = get_dma_ops(dev);
 	debug_dma_mapping_error(dev, dev_addr);
 	return ops->mapping_error(dev, dev_addr);
 }
 
 static inline int dma_supported(struct device *dev, u64 mask)
 {
-	struct dma_map_ops *ops = get_dma_ops(dev);
+	const struct dma_map_ops *ops = get_dma_ops(dev);
 	return ops->dma_supported(dev, mask);
 }
 
@@ -96,7 +105,7 @@ static inline void *dma_alloc_attrs(struct device *dev, size_t size,
 				    dma_addr_t *dma_handle, gfp_t flags,
 				    struct dma_attrs *attrs)
 {
-	struct dma_map_ops *ops = get_dma_ops(dev);
+	const struct dma_map_ops *ops = get_dma_ops(dev);
 	void *vaddr;
 
 	if (dma_alloc_from_coherent(dev, size, dma_handle, &vaddr))
@@ -111,7 +120,7 @@ static inline void dma_free_attrs(struct device *dev, size_t size,
 				  void *vaddr, dma_addr_t dev_addr,
 				  struct dma_attrs *attrs)
 {
-	struct dma_map_ops *ops = get_dma_ops(dev);
+	const struct dma_map_ops *ops = get_dma_ops(dev);
 
 	if (dma_release_from_coherent(dev, get_order(size), vaddr))
 		return;
@@ -119,6 +128,49 @@ static inline void dma_free_attrs(struct device *dev, size_t size,
 	debug_dma_free_coherent(dev, size, vaddr, dev_addr);
 	ops->free(dev, size, vaddr, dev_addr, attrs);
 }
+
+
+static inline void *dma_alloc_writecombine(struct device *dev, size_t size,
+					dma_addr_t *dma_handle, gfp_t flag)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+	return dma_alloc_attrs(dev, size, dma_handle, flag, &attrs);
+}
+
+static inline void dma_free_writecombine(struct device *dev, size_t size,
+					void *cpu_addr, dma_addr_t dma_handle)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+	return dma_free_attrs(dev, size, cpu_addr, dma_handle, &attrs);
+}
+
+static inline void *dma_alloc_nonconsistent(struct device *dev, size_t size,
+					dma_addr_t *dma_handle, gfp_t flag)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_NON_CONSISTENT, &attrs);
+	return dma_alloc_attrs(dev, size, dma_handle, flag, &attrs);
+}
+
+static inline void dma_free_nonconsistent(struct device *dev, size_t size,
+					void *cpu_addr, dma_addr_t dma_handle)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_NON_CONSISTENT, &attrs);
+	return dma_free_attrs(dev, size, cpu_addr, dma_handle, &attrs);
+}
+
+static inline int dma_mmap_nonconsistent(struct device *dev,
+		struct vm_area_struct *vma, void *cpu_addr,
+		dma_addr_t dma_addr, size_t size)
+{
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_NON_CONSISTENT, &attrs);
+	return dma_mmap_attrs(dev, vma, cpu_addr, dma_addr, size, &attrs);
+}
+
 
 /*
  * There is no dma_cache_sync() implementation, so just return NULL here.

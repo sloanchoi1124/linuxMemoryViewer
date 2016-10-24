@@ -424,6 +424,10 @@ extern struct block_device *bdget_disk(struct gendisk *disk, int partno);
 extern void set_device_ro(struct block_device *bdev, int flag);
 extern void set_disk_ro(struct gendisk *disk, int flag);
 
+#ifdef CONFIG_HW_SD_HEALTH_DETECT
+extern void set_sd_disk_health_status(struct gendisk *disk, char *status);
+#endif
+
 static inline int get_disk_ro(struct gendisk *disk)
 {
 	return disk->part0.policy;
@@ -649,7 +653,7 @@ static inline void hd_ref_init(struct hd_struct *part)
 static inline void hd_struct_get(struct hd_struct *part)
 {
 	atomic_inc(&part->ref);
-	smp_mb__after_atomic_inc();
+	smp_mb__after_atomic();
 }
 
 static inline int hd_struct_try_get(struct hd_struct *part)

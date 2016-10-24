@@ -25,8 +25,6 @@
 #include <linux/sched.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
-#include <linux/slab.h>
-#include <linux/acpi.h>
 
 MODULE_AUTHOR("Google, Inc.");
 MODULE_DESCRIPTION("Android QEMU Audio Driver");
@@ -76,18 +74,11 @@ enum {
 	/* set number of bytes in buffer to write */
 	AUDIO_WRITE_BUFFER_1  = 0x10,
 	AUDIO_WRITE_BUFFER_2  = 0x14,
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	AUDIO_SET_WRITE_BUFFER_1_HIGH = 0x28,
-	AUDIO_SET_WRITE_BUFFER_2_HIGH = 0x30,
-#endif
 
 	/* true if audio input is supported */
 	AUDIO_READ_SUPPORTED = 0x18,
 	/* buffer to use for audio input */
 	AUDIO_SET_READ_BUFFER = 0x1C,
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	AUDIO_SET_READ_BUFFER_HIGH = 0x34,
-#endif
 
 	/* driver writes number of bytes to read */
 	AUDIO_START_READ  = 0x20,
@@ -115,7 +106,6 @@ static ssize_t goldfish_audio_read(struct file *fp, char __user *buf,
 						size_t count, loff_t *pos)
 {
 	struct goldfish_audio *data = fp->private_data;
-	unsigned long irq_flags;
 	int length;
 	int result = 0;
 
@@ -128,10 +118,6 @@ static ssize_t goldfish_audio_read(struct file *fp, char __user *buf,
 
 		wait_event_interruptible(data->wait,
 			(data->buffer_status & AUDIO_INT_READ_BUFFER_FULL));
-
-		spin_lock_irqsave(&data->lock, irq_flags);
-		data->buffer_status &= ~AUDIO_INT_READ_BUFFER_FULL;
-		spin_unlock_irqrestore(&data->lock, irq_flags);
 
 		length = AUDIO_READ(data,
 						AUDIO_READ_BUFFER_AVAILABLE);
@@ -272,9 +258,6 @@ static int goldfish_audio_probe(struct platform_device *pdev)
 	struct resource *r;
 	struct goldfish_audio *data;
 	dma_addr_t buf_addr;
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	u32 buf_addr_high, buf_addr_low;
-#endif
 
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (data == NULL) {
@@ -330,28 +313,6 @@ static int goldfish_audio_probe(struct platform_device *pdev)
 		goto err_misc_register_failed;
 	}
 
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	buf_addr_low = (u32)(buf_addr);
-	buf_addr_high = (u32)((buf_addr) >> 32);
-
-	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_1, buf_addr_low);
-	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_1_HIGH, buf_addr_high);
-
-	buf_addr_low = (u32)(buf_addr + WRITE_BUFFER_SIZE);
-	buf_addr_high = (u32)((buf_addr + WRITE_BUFFER_SIZE) >> 32);
-
-	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_2, buf_addr_low);
-	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_2_HIGH, buf_addr_high);
-
-	buf_addr_low = (u32)(buf_addr + 2 * WRITE_BUFFER_SIZE);
-	buf_addr_high = (u32)((buf_addr + 2 * WRITE_BUFFER_SIZE) >> 32);
-
-	data->read_supported = AUDIO_READ(data, AUDIO_READ_SUPPORTED);
-	if (data->read_supported){
-                AUDIO_WRITE(data, AUDIO_SET_READ_BUFFER, buf_addr_low);
-                AUDIO_WRITE(data, AUDIO_SET_READ_BUFFER_HIGH, buf_addr_high);
-	}
-#else
 	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_1, buf_addr);
 	AUDIO_WRITE(data, AUDIO_SET_WRITE_BUFFER_2,
 						buf_addr + WRITE_BUFFER_SIZE);
@@ -360,7 +321,6 @@ static int goldfish_audio_probe(struct platform_device *pdev)
 	if (data->read_supported)
 		AUDIO_WRITE(data, AUDIO_SET_READ_BUFFER,
 					buf_addr + 2 * WRITE_BUFFER_SIZE);
-#endif
 
 	audio_data = data;
 	return 0;
@@ -392,25 +352,11 @@ static int goldfish_audio_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id goldfish_audio_of_match[] = {
-	{ .compatible = "generic,goldfish-audio", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, goldfish_audio_of_match);
-
-static const struct acpi_device_id goldfish_audio_acpi_match[] = {
-	{ "GFSH0005", 0 },
-	{ },
-};
-MODULE_DEVICE_TABLE(acpi, goldfish_audio_acpi_match);
-
 static struct platform_driver goldfish_audio_driver = {
 	.probe		= goldfish_audio_probe,
 	.remove		= goldfish_audio_remove,
 	.driver = {
-		.name = "goldfish_audio",
-		.of_match_table = goldfish_audio_of_match,
-		.acpi_match_table = ACPI_PTR(goldfish_audio_acpi_match),
+		.name = "goldfish_audio"
 	}
 };
 

@@ -22,18 +22,10 @@
 #include <asm/cpu.h>
 #include <asm/fpu.h>
 #include <asm/mipsregs.h>
-#include <asm/msa.h>
 #include <asm/watch.h>
 #include <asm/elf.h>
 #include <asm/spram.h>
 #include <asm/uaccess.h>
-
-/* Hardware capabilities */
-#ifdef CONFIG_CPU_MIPSR6
-unsigned int elf_hwcap __read_mostly = HWCAP_MIPS_R6;
-#else
-unsigned int elf_hwcap __read_mostly;
-#endif
 
 static int __cpuinitdata mips_fpu_disabled;
 
@@ -59,20 +51,6 @@ static int __init dsp_disable(char *s)
 
 __setup("nodsp", dsp_disable);
 
-static int mips_htw_disabled;
-
-static int __init htw_disable(char *s)
-{
-	mips_htw_disabled = 1;
-	if (cpu_has_htw) {
-		write_c0_pwctl(HTW_PWCTL_BASE);
-		cpu_data[0].options2 &= ~MIPS_CPU_HTW;
-	}
-	return 1;
-}
-
-__setup("nohtw", htw_disable);
-
 static inline void check_errata(void)
 {
 	struct cpuinfo_mips *c = &current_cpu_data;
@@ -97,8 +75,6 @@ void __init check_bugs32(void)
 	check_errata();
 }
 
-#include <asm/pgtable.h>
-#include <asm/bootinfo.h>
 /*
  * Probe whether cpu has config register by trying to play with
  * alternate cache bit and see whether it matters.
@@ -142,42 +118,11 @@ static inline unsigned long cpu_get_fpu_id(void)
 }
 
 /*
- * Set and Get the FPU CSR31.
- */
-static inline unsigned long cpu_test_fpu_csr31(unsigned long fcr31)
-{
-	unsigned long tmp;
-
-	tmp = read_c0_status();
-	__enable_fpu();
-	write_32bit_cp1_register(CP1_STATUS,fcr31);
-	enable_fpu_hazard();
-	fcr31 = read_32bit_cp1_register(CP1_STATUS);
-	write_c0_status(tmp);
-	return fcr31;
-}
-
-/*
  * Check the CPU has an FPU the official way.
  */
 static inline int __cpu_has_fpu(void)
 {
 	return ((cpu_get_fpu_id() & 0xff00) != FPIR_IMP_NONE);
-}
-
-static inline unsigned long cpu_get_msa_id(void)
-{
-	unsigned long status, msa_id;
-
-	status = read_c0_status();
-	set_c0_status(ST0_CU1|ST0_FR);
-	enable_fpu_hazard();
-	clear_c0_config5(MIPS_CONF5_FRE);
-	enable_msa();
-	msa_id = read_msa_ir();
-	disable_msa();
-	write_c0_status(status);
-	return msa_id;
 }
 
 static inline void cpu_probe_vmbits(struct cpuinfo_mips *c)
@@ -187,17 +132,6 @@ static inline void cpu_probe_vmbits(struct cpuinfo_mips *c)
 	back_to_back_c0_hazard();
 	c->vmbits = fls64(read_c0_entryhi() & 0x3fffffffffffe000ULL);
 #endif
-}
-
-static inline void cpu_probe_pabits(struct cpuinfo_mips *c)
-{
-	unsigned int enlow;
-
-	write_c0_entrylo0((-1UL)>>2); /* skip RIXI bits */
-	back_to_back_c0_hazard();
-	enlow = read_c0_entrylo0();
-	if ((_MIPS_SZLONG - fls(enlow)) < ilog2(_PAGE_GLOBAL))
-		c->options2 |= MIPS_CPU_HIMEM;
 }
 
 static void __cpuinit set_isa(struct cpuinfo_mips *c, unsigned int isa)
@@ -228,54 +162,6 @@ static void __cpuinit set_isa(struct cpuinfo_mips *c, unsigned int isa)
 	}
 }
 
-static void report_kernel(void)
-{
-	printk("Kernel:");
-#ifdef CONFIG_CPU_BIG_ENDIAN
-	printk(" EB");
-#endif
-#ifdef CONFIG_CPU_LITTLE_ENDIAN
-	printk(" EL");
-#endif
-#ifdef CONFIG_64BIT
-	printk(" 64bit, 64bit address");
-#ifdef CONFIG_48VMBITS
-	printk(", 48 segbits");
-#else
-	printk(", 40 segbits");
-#endif
-#elif defined(CONFIG_CPU_MIPS64)
-	printk(" 64bit, 32bit address");
-#else
-	printk(" 32bit");
-#endif
-#ifdef CONFIG_CPU_MIPSR6
-	printk(", R6");
-#endif
-#ifdef CONFIG_CPU_HAS_MSA
-	printk(", MSA");
-#endif
-#ifdef CONFIG_MIPS_HARDWARE_TRACE
-	printk(", HW trace");
-#endif
-#ifdef CONFIG_NO_HZ_IDLE
-	printk(", dynamic ticks");
-#else
-	printk(", periodic ticks");
-#endif
-	printk(" %dHz",CONFIG_HZ);
-#ifdef CONFIG_HIGH_RES_TIMERS
-	printk(", HiRes timers");
-#endif
-#ifdef CONFIG_DMA_COHERENT
-	printk(", coherent DMA");
-#endif
-#ifdef CONFIG_DMA_NONCOHERENT
-	printk(", non-coherent DMA");
-#endif
-	printk(", pagesize=%dKiB\n",(1 << (PAGE_SHIFT - 10)));
-}
-
 static char unknown_isa[] __cpuinitdata = KERN_ERR \
 	"Unsupported ISA type, c0.config0: %d.";
 
@@ -288,8 +174,6 @@ static inline unsigned int decode_config0(struct cpuinfo_mips *c)
 
 	if (((config0 & MIPS_CONF_MT) >> 7) == 1)
 		c->options |= MIPS_CPU_TLB;
-	if (((config0 & MIPS_CONF_MT) >> 7) == 4)
-		c->options |= MIPS_CPU_TLB;
 	isa = (config0 & MIPS_CONF_AT) >> 13;
 	switch (isa) {
 	case 0:
@@ -299,9 +183,6 @@ static inline unsigned int decode_config0(struct cpuinfo_mips *c)
 			break;
 		case 1:
 			set_isa(c, MIPS_CPU_ISA_M32R2);
-			break;
-		case 2:
-			c->isa_level = MIPS_CPU_ISA_M32R6;
 			break;
 		default:
 			goto unknown;
@@ -315,9 +196,8 @@ static inline unsigned int decode_config0(struct cpuinfo_mips *c)
 		case 1:
 			set_isa(c, MIPS_CPU_ISA_M64R2);
 			break;
-		case 2:
-			c->isa_level = MIPS_CPU_ISA_M64R6;
-			break;
+		default:
+			goto unknown;
 		}
 		break;
 	default:
@@ -348,11 +228,8 @@ static inline unsigned int decode_config1(struct cpuinfo_mips *c)
 		c->options |= MIPS_CPU_FPU;
 		c->options |= MIPS_CPU_32FPR;
 	}
-	if (cpu_has_tlb) {
+	if (cpu_has_tlb)
 		c->tlbsize = ((config1 & MIPS_CONF1_TLBS) >> 25) + 1;
-		c->tlbsizevtlb = c->tlbsize;
-		c->tlbsizeftlbsets = 0;
-	}
 
 	return config1 & MIPS_CONF_M;
 }
@@ -377,14 +254,10 @@ static inline unsigned int decode_config3(struct cpuinfo_mips *c)
 
 	if (config3 & MIPS_CONF3_SM) {
 		c->ases |= MIPS_ASE_SMARTMIPS;
-#if defined(CONFIG_64BIT) || !defined(CONFIG_MIPS_HUGE_TLB_SUPPORT)
 		c->options |= MIPS_CPU_RIXI;
-#endif
 	}
-#if defined(CONFIG_64BIT) || !defined(CONFIG_MIPS_HUGE_TLB_SUPPORT)
 	if (config3 & MIPS_CONF3_RXI)
 		c->options |= MIPS_CPU_RIXI;
-#endif
 	if (config3 & MIPS_CONF3_DSP)
 		c->ases |= MIPS_ASE_DSP;
 	if (config3 & MIPS_CONF3_DSP2P)
@@ -404,174 +277,28 @@ static inline unsigned int decode_config3(struct cpuinfo_mips *c)
 #endif
 	if (config3 & MIPS_CONF3_VZ)
 		c->ases |= MIPS_ASE_VZ;
-	if (config3 & MIPS_CONF3_SC)
-		c->options |= MIPS_CPU_SEGMENTS;
-	/* Only tested on 32-bit cores */
-	if (config3 & MIPS_CONF3_PW && !config_enabled(CONFIG_MIPS_PGD_C0_CONTEXT))
-		c->options2 |= MIPS_CPU_HTW;
-	if (config3 & MIPS_CONF3_MSA)
-		c->ases |= MIPS_ASE_MSA;
 
 	return config3 & MIPS_CONF_M;
 }
 
-static unsigned int cpu_capability = 0;
-
-static inline unsigned int decode_config4(struct cpuinfo_mips *c, int pass,
-					  int conf6available)
+static inline unsigned int decode_config4(struct cpuinfo_mips *c)
 {
 	unsigned int config4;
-	unsigned int newcf4;
-	unsigned int config6;
 
 	config4 = read_c0_config4();
 
-	if (pass && cpu_has_tlb) {
-		if (config4 & MIPS_CONF4_IE) {
-			if (config4 & MIPS_CONF4_TLBINV) {
-				c->options |= MIPS_CPU_TLBINV;
-				printk("TLBINV/F supported, config4=0x%0x\n",config4);
-				if (config4 & MIPS_CONF4_TLBINV_FULL)
-					c->options |= MIPS_CPU_TLBINV_FULL;
-			}
-		}
-#ifdef CONFIG_CPU_MIPSR6
-		c->tlbsizevtlb = ((c->tlbsizevtlb - 1) |
-			(((config4 & MIPS_CONF4_VTLBSIZEEXT) >>
-			  MIPS_CONF4_VTLBSIZEEXT_SHIFT) <<
-			 MIPS_CONF1_TLBS_SIZE)) + 1;
-		c->tlbsize = c->tlbsizevtlb;
-
-		newcf4 = (config4 & ~MIPS_CONF4_FTLBPAGESIZE) |
-			((((fls(PAGE_SIZE >> BASIC_PAGE_SHIFT)-1)/2)+1) <<
-			 MIPS_CONF4_FTLBPAGESIZE_SHIFT);
-		write_c0_config4(newcf4);
-		back_to_back_c0_hazard();
-		config4 = read_c0_config4();
-		if (config4 != newcf4) {
-			printk(KERN_ERR "PAGE_SIZE 0x%0lx is not supported by FTLB (config4=0x%0x)\n",
-				PAGE_SIZE, config4);
-			if (conf6available && (cpu_capability & MIPS_FTLB_CAPABLE)) {
-				printk("Switching FTLB OFF\n");
-				config6 = read_c0_config6();
-				write_c0_config6(config6 & ~MIPS_CONF6_FTLBEN);
-			}
-			printk("Total TLB(VTLB) inuse: %d\n",c->tlbsizevtlb);
-		} else {
-			c->tlbsizeftlbsets = 1 <<
-				((config4 & MIPS_CONF4_FTLBSETS) >>
-				 MIPS_CONF4_FTLBSETS_SHIFT);
-			c->tlbsizeftlbways = ((config4 & MIPS_CONF4_FTLBWAYS) >>
-					      MIPS_CONF4_FTLBWAYS_SHIFT) + 2;
-			c->tlbsize += (c->tlbsizeftlbways *
-				       c->tlbsizeftlbsets);
-			printk("V/FTLB found: VTLB=%d, FTLB sets=%d, ways=%d total TLB=%d\n",
-				c->tlbsizevtlb, c->tlbsizeftlbsets, c->tlbsizeftlbways, c->tlbsize);
-		}
-#else
-		switch (config4 & MIPS_CONF4_MMUEXTDEF) {
-		case MIPS_CONF4_MMUEXTDEF_MMUSIZEEXT:
-			c->tlbsize =
-			    ((((config4 & MIPS_CONF4_MMUSIZEEXT) >>
-			       MIPS_CONF4_MMUSIZEEXT_SHIFT) <<
-			      MIPS_CONF1_TLBS_SIZE) |
-				(c->tlbsize - 1)) + 1;
-			c->tlbsizevtlb = c->tlbsize;
-			printk("MMUSizeExt found, total TLB=%d\n",c->tlbsize);
-			break;
-		case MIPS_CONF4_MMUEXTDEF_VTLBSIZEEXT:
-			c->tlbsizevtlb = ((c->tlbsizevtlb - 1) |
-				(((config4 & MIPS_CONF4_VTLBSIZEEXT) >>
-				  MIPS_CONF4_VTLBSIZEEXT_SHIFT) <<
-				 MIPS_CONF1_TLBS_SIZE)) + 1;
-			c->tlbsize = c->tlbsizevtlb;
-			/* fall through */
-		case MIPS_CONF4_MMUEXTDEF_FTLBSIZEEXT:
-			newcf4 = (config4 & ~MIPS_CONF4_FTLBPAGESIZE) |
-				((((fls(PAGE_SIZE >> BASIC_PAGE_SHIFT)-1)/2)+1) <<
-				 MIPS_CONF4_FTLBPAGESIZE_SHIFT);
-			write_c0_config4(newcf4);
-			back_to_back_c0_hazard();
-			config4 = read_c0_config4();
-			if (config4 != newcf4) {
-				printk(KERN_ERR "PAGE_SIZE 0x%0lx is not supported by FTLB (config4=0x%0x)\n",
-					PAGE_SIZE, config4);
-				if (conf6available && (cpu_capability & MIPS_FTLB_CAPABLE)) {
-					printk("Switching FTLB OFF\n");
-					config6 = read_c0_config6();
-					write_c0_config6(config6 & ~MIPS_CONF6_FTLBEN);
-				}
-				printk("Total TLB(VTLB) inuse: %d\n",c->tlbsizevtlb);
-				break;
-			}
-			c->tlbsizeftlbsets = 1 <<
-				((config4 & MIPS_CONF4_FTLBSETS) >>
-				 MIPS_CONF4_FTLBSETS_SHIFT);
-			c->tlbsizeftlbways = ((config4 & MIPS_CONF4_FTLBWAYS) >>
-					      MIPS_CONF4_FTLBWAYS_SHIFT) + 2;
-			c->tlbsize += (c->tlbsizeftlbways *
-				       c->tlbsizeftlbsets);
-			printk("V/FTLB found: VTLB=%d, FTLB sets=%d, ways=%d total TLB=%d\n",
-				c->tlbsizevtlb, c->tlbsizeftlbsets, c->tlbsizeftlbways, c->tlbsize);
-			break;
-		}
-#endif
-	}
+	if ((config4 & MIPS_CONF4_MMUEXTDEF) == MIPS_CONF4_MMUEXTDEF_MMUSIZEEXT
+	    && cpu_has_tlb)
+		c->tlbsize += (config4 & MIPS_CONF4_MMUSIZEEXT) * 0x40;
 
 	c->kscratch_mask = (config4 >> 16) & 0xff;
 
 	return config4 & MIPS_CONF_M;
 }
 
-static inline unsigned int decode_config5(struct cpuinfo_mips *c)
+static void __cpuinit decode_configs(struct cpuinfo_mips *c)
 {
-	unsigned int config5;
-
-	config5 = read_c0_config5();
-	config5 &= ~(MIPS_CONF5_UFR | MIPS_CONF5_UFE);
-	write_c0_config5(config5);
-
-	if (config5 & MIPS_CONF5_EVA)
-		c->options |= MIPS_CPU_EVA;
-	if (config5 & MIPS_CONF5_MRP)
-		c->options2 |= MIPS_CPU_MAAR;
-	if (config5 & MIPS_CONF5_L2C)
-		c->options2 |= MIPS_CPU_L2C;
-	if (config5 & MIPS_CONF5_VC)
-		c->options2 |= MIPS_CPU_VC;
-
-	return config5 & MIPS_CONF_M;
-}
-
-static inline unsigned int decode_config6_ftlb(struct cpuinfo_mips *c)
-{
-	unsigned int config6;
-
-	if (cpu_capability & MIPS_FTLB_CAPABLE) {
-
-		/*
-		 * Can't rely on mips_ftlb_disabled since kernel command line
-		 * hasn't been processed yet.  Need to peek at the raw command
-		 * line for "noftlb".
-		 */
-		if (strstr(arcs_cmdline, "noftlb") == NULL) {
-			config6 = read_c0_config6();
-
-			printk("Enable FTLB attempt\n");
-			write_c0_config6(config6 | MIPS_CONF6_FTLBEN);
-			back_to_back_c0_hazard();
-
-			return(1);
-		}
-	}
-
-	return(0);
-}
-
-
-static void decode_configs(struct cpuinfo_mips *c)
-{
-	int ok, ok3 = 0, ok6 = 0;
+	int ok;
 
 	/* MIPS32 or MIPS64 compliant CPU.  */
 	c->options = MIPS_CPU_4KEX | MIPS_CPU_4K_CACHE | MIPS_CPU_COUNTER |
@@ -580,36 +307,20 @@ static void decode_configs(struct cpuinfo_mips *c)
 	c->scache.flags = MIPS_CACHE_NOT_PRESENT;
 
 	ok = decode_config0(c);			/* Read Config registers.  */
-	BUG_ON(!ok);				/* Arch spec violation!  */
+	BUG_ON(!ok);				/* Arch spec violation!	 */
 	if (ok)
 		ok = decode_config1(c);
 	if (ok)
 		ok = decode_config2(c);
 	if (ok)
-		ok = ok3 = decode_config3(c);
+		ok = decode_config3(c);
 	if (ok)
-		ok = decode_config4(c,0,0);   /* first pass - just return Mbit */
-	if (ok)
-		ok = decode_config5(c);
-	if (cpu_capability & MIPS_FTLB_CAPABLE)
-		ok6 = decode_config6_ftlb(c);
-
-	if (ok3)
-		ok = decode_config4(c,1,ok6); /* real parse pass, thanks HW team :-/ */
+		ok = decode_config4(c);
 
 	mips_probe_watch_registers(c);
 
-	if (cpu_has_mips_r2 || cpu_has_mips_r6)
+	if (cpu_has_mips_r2)
 		c->core = read_c0_ebase() & 0x3ff;
-
-	if (cpu_has_rixi) {
-		write_c0_pagegrain(read_c0_pagegrain() | PG_IEC);
-		back_to_back_c0_hazard();
-		if (read_c0_pagegrain() & PG_IEC) {
-			c->options |= MIPS_CPU_RIXI_EXCEPT;
-			pr_info("TLBRI/TLBXI exceptions are used\n");
-		}
-	}
 }
 
 #define R4K_OPTS (MIPS_CPU_TLB | MIPS_CPU_4KEX | MIPS_CPU_4K_CACHE \
@@ -937,11 +648,8 @@ static inline void cpu_probe_legacy(struct cpuinfo_mips *c, unsigned int cpu)
 
 static inline void cpu_probe_mips(struct cpuinfo_mips *c, unsigned int cpu)
 {
+	decode_configs(c);
 	switch (c->processor_id & 0xff00) {
-	case PRID_IMP_QEMU:
-		c->cputype = CPU_QEMU;
-		__cpu_name[cpu] = "MIPS GENERIC QEMU";
-		break;
 	case PRID_IMP_4KC:
 		c->cputype = CPU_4KC;
 		__cpu_name[cpu] = "MIPS 4Kc";
@@ -1004,39 +712,7 @@ static inline void cpu_probe_mips(struct cpuinfo_mips *c, unsigned int cpu)
 		c->cputype = CPU_74K;
 		__cpu_name[cpu] = "MIPS 1074Kc";
 		break;
-	case PRID_IMP_PROAPTIV_UP:
-		c->cputype = CPU_PROAPTIV;
-		__cpu_name[cpu] = "MIPS proAptiv";
-		cpu_capability = MIPS_FTLB_CAPABLE;
-		break;
-	case PRID_IMP_PROAPTIV_MP:
-		c->cputype = CPU_PROAPTIV;
-		__cpu_name[cpu] = "MIPS proAptiv (multi)";
-		cpu_capability = MIPS_FTLB_CAPABLE;
-		break;
-	case PRID_IMP_INTERAPTIV_UP:
-		c->cputype = CPU_INTERAPTIV;
-		__cpu_name[cpu] = "MIPS interAptiv UP";
-		break;
-	case PRID_IMP_INTERAPTIV_MP:
-		c->cputype = CPU_INTERAPTIV;
-		__cpu_name[cpu] = "MIPS interAptiv";
-	case PRID_IMP_VIRTUOSO:
-		c->cputype = CPU_VIRTUOSO;
-		__cpu_name[cpu] = "MIPS Virtuoso";
-		break;
-	case PRID_IMP_P5600:
-		c->cputype = CPU_P5600;
-		__cpu_name[cpu] = "MIPS P5600";
-		cpu_capability = MIPS_FTLB_CAPABLE;
-		break;
-	case PRID_IMP_SAMURAI_UP:
-		c->cputype = CPU_SAMURAI;
-		__cpu_name[cpu] = "MIPS Samurai UP";
-		break;
 	}
-	report_kernel();
-	decode_configs(c);
 
 	spram_config();
 }
@@ -1293,9 +969,6 @@ EXPORT_SYMBOL(__ua_limit);
 
 const char *__cpu_name[NR_CPUS];
 const char *__elf_platform;
-unsigned int fpu_fcr31 __read_mostly = 0;
-unsigned int system_has_fpu __read_mostly = 0;
-unsigned int global_fpu_id  __read_mostly = 0;
 
 __cpuinit void cpu_probe(void)
 {
@@ -1356,34 +1029,17 @@ __cpuinit void cpu_probe(void)
 	if (mips_dsp_disabled)
 		c->ases &= ~(MIPS_ASE_DSP | MIPS_ASE_DSP2P);
 
-	c->htw_level = 0;
-	if (c->options2 & MIPS_CPU_HTW)
-		write_c0_pwctl(HTW_PWCTL_BASE);
-	if (mips_htw_disabled)
-		c->options2 &= ~MIPS_CPU_HTW;
-
 	if (c->options & MIPS_CPU_FPU) {
-		system_has_fpu = 1;
-		fpu_fcr31 = cpu_test_fpu_csr31(FPU_CSR_DEFAULT);
+		c->fpu_id = cpu_get_fpu_id();
 
-		global_fpu_id = cpu_get_fpu_id();
-		c->fpu_id = global_fpu_id;
-
-		if (c->isa_level & (MIPS_CPU_ISA_M32R1 | MIPS_CPU_ISA_M64R1 |
-				    MIPS_CPU_ISA_M32R2 | MIPS_CPU_ISA_M64R2 |
-				    MIPS_CPU_ISA_M32R6 | MIPS_CPU_ISA_M64R6)) {
+		if (c->isa_level & (MIPS_CPU_ISA_M32R1 | MIPS_CPU_ISA_M32R2 |
+				    MIPS_CPU_ISA_M64R1 | MIPS_CPU_ISA_M64R2)) {
 			if (c->fpu_id & MIPS_FPIR_3D)
 				c->ases |= MIPS_ASE_MIPS3D;
-			if (c->fpu_id & MIPS_FPIR_HAS2008)
-				fpu_fcr31 = cpu_test_fpu_csr31(FPU_CSR_DEFAULT|FPU_CSR_MAC2008|FPU_CSR_ABS2008|FPU_CSR_NAN2008);
-			if (c->fpu_id & MIPS_FPIR_FREP) {
-				c->options2 |= MIPS_CPU_FRE;
-				pr_info("FPU has FRE support\n");
-			}
 		}
 	}
 
-	if (cpu_has_mips_r2 || cpu_has_mips_r6) {
+	if (cpu_has_mips_r2) {
 		c->srsets = ((read_c0_srsctl() >> 26) & 0x0f) + 1;
 		/* R2 has Performance Counter Interrupt indicator */
 		c->options |= MIPS_CPU_PCI;
@@ -1391,15 +1047,7 @@ __cpuinit void cpu_probe(void)
 	else
 		c->srsets = 1;
 
-	if (cpu_has_msa) {
-		c->msa_id = cpu_get_msa_id();
-		WARN(c->msa_id & MSA_IR_WRPF,
-		     "Vector register partitioning unimplemented!");
-		elf_hwcap |= HWCAP_MIPS_MSA;
-	}
-
 	cpu_probe_vmbits(c);
-	cpu_probe_pabits(c);
 
 #ifdef CONFIG_64BIT
 	if (cpu == 0)
@@ -1411,10 +1059,8 @@ __cpuinit void cpu_report(void)
 {
 	struct cpuinfo_mips *c = &current_cpu_data;
 
-	printk(KERN_INFO "CPU%d revision is: %08x (%s)\n",
-	       smp_processor_id(), c->processor_id, cpu_name_string());
+	printk(KERN_INFO "CPU revision is: %08x (%s)\n",
+	       c->processor_id, cpu_name_string());
 	if (c->options & MIPS_CPU_FPU)
 		printk(KERN_INFO "FPU revision is: %08x\n", c->fpu_id);
-	if (cpu_has_msa)
-		pr_info("MSA revision is: %08x\n", c->msa_id);
 }

@@ -22,6 +22,8 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/reboot.h>
+#include <linux/of.h>
 #include <linux/irqchip.h>
 #include <linux/clk/tegra.h>
 
@@ -67,7 +69,7 @@ void __init tegra_dt_init_irq(void)
 }
 #endif
 
-void tegra_assert_system_reset(char mode, const char *cmd)
+void tegra_assert_system_reset(enum reboot_mode mode, const char *cmd)
 {
 	void __iomem *reset = IO_ADDRESS(TEGRA_PMC_BASE + 0);
 	u32 reg;
@@ -80,9 +82,19 @@ void tegra_assert_system_reset(char mode, const char *cmd)
 static void __init tegra_init_cache(void)
 {
 #ifdef CONFIG_CACHE_L2X0
+	static const struct of_device_id pl310_ids[] __initconst = {
+		{ .compatible = "arm,pl310-cache",  },
+		{}
+	};
+
+	struct device_node *np;
 	int ret;
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
 	u32 aux_ctrl, cache_type;
+
+	np = of_find_matching_node(NULL, pl310_ids);
+	if (!np)
+		return;
 
 	cache_type = readl(p + L2X0_CACHE_TYPE);
 	aux_ctrl = (cache_type & 0x700) << (17-8);

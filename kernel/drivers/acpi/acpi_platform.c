@@ -16,7 +16,6 @@
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
 
 #include "internal.h"
@@ -30,30 +29,6 @@ ACPI_MODULE_NAME("platform");
 static const struct acpi_device_id acpi_platform_device_ids[] = {
 
 	{ "PNP0D40" },
-
-	/* Android-specific virtual hardware (goldfish devices)
-	 *
-	 * Note 1: The sole purpose of adding the following ACPI IDs is to
-	 * ensure that these goldfish devices are enumerated to the kernel as
-	 * platform devices.
-	 *
-	 * Note 2: Once the Android emulator has adopted Linux kernel 3.16 or
-	 * newer (it still uses 3.10 at the time of writing), these changes will
-	 * become obsolete (in fact, this acpi_platform_device_ids array will
-	 * disappear), since the new kernel will recognize devices enumerated
-	 * via ACPI as platform devices by default.
-	 *
-	 * Note 3: See external/qemu-android/hw/i386/acpi-dsdt-goldfish.dsl in
-	 * the Android source tree for the original definitions of these ACPI
-	 * IDs in ASL.
-	 */
-	{ "GFSH0001" },  /* goldfish battery */
-	{ "GFSH0002" },  /* goldfish events */
-	{ "GFSH0003" },  /* android pipe */
-	{ "GFSH0004" },  /* goldfish framebuffer */
-	{ "GFSH0005" },  /* goldfish audio */
-	{ "GFSH0006" },  /* goldfish sync */
-	{ "GFSH0007" },  /* goldfish rtc */
 
 	{ }
 };
@@ -128,7 +103,6 @@ int acpi_create_platform_device(struct acpi_device *adev,
 	pdevinfo.res = resources;
 	pdevinfo.num_res = count;
 	pdevinfo.acpi_node.handle = adev->handle;
-	pdevinfo.dma_mask = DMA_BIT_MASK(32);
 	pdev = platform_device_register_full(&pdevinfo);
 	if (IS_ERR(pdev)) {
 		dev_err(&adev->dev, "platform device creation failed: %ld\n",

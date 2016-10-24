@@ -42,6 +42,9 @@ static int (*restore_fp_context32)(struct sigcontext32 __user *sc);
 extern asmlinkage int _save_fp_context32(struct sigcontext32 __user *sc);
 extern asmlinkage int _restore_fp_context32(struct sigcontext32 __user *sc);
 
+extern asmlinkage int fpu_emulator_save_context32(struct sigcontext32 __user *sc);
+extern asmlinkage int fpu_emulator_restore_context32(struct sigcontext32 __user *sc);
+
 /*
  * Including <asm/unistd.h> would give use the 64-bit syscall numbers ...
  */
@@ -74,9 +77,191 @@ struct rt_sigframe32 {
 	struct ucontext32 rs_uc;
 };
 
-#define SUFFIX(n) n##32
-typedef struct sigcontext32 user_sigcontext_t;
-#include "signal-common.c"
+/*
+ * sigcontext handlers
+ */
+static int protected_save_fp_context32(struct sigcontext32 __user *sc)
+{
+	int err;
+	while (1) {
+		lock_fpu_owner();
+		own_fpu_inatomic(1);
+		err = save_fp_context32(sc); /* this might fail */
+		unlock_fpu_owner();
+		if (likely(!err))
+			break;
+		/* touch the sigcontext and try again */
+		err = __put_user(0, &sc->sc_fpregs[0]) |
+			__put_user(0, &sc->sc_fpregs[31]) |
+			__put_user(0, &sc->sc_fpc_csr);
+		if (err)
+			break;	/* really bad sigcontext */
+	}
+	return err;
+}
+
+static int protected_restore_fp_context32(struct sigcontext32 __user *sc)
+{
+	int err, tmp __maybe_unused;
+	while (1) {
+		lock_fpu_owner();
+		own_fpu_inatomic(0);
+		err = restore_fp_context32(sc); /* this might fail */
+		unlock_fpu_owner();
+		if (likely(!err))
+			break;
+		/* touch the sigcontext and try again */
+		err = __get_user(tmp, &sc->sc_fpregs[0]) |
+			__get_user(tmp, &sc->sc_fpregs[31]) |
+			__get_user(tmp, &sc->sc_fpc_csr);
+		if (err)
+			break;	/* really bad sigcontext */
+	}
+	return err;
+}
+
+static int setup_sigcontext32(struct pt_regs *regs,
+			      struct sigcontext32 __user *sc)
+{
+	int err = 0;
+	int i;
+	u32 used_math;
+
+	err |= __put_user(regs->cp0_epc, &sc->sc_pc);
+
+	err |= __put_user(0, &sc->sc_regs[0]);
+	for (i = 1; i < 32; i++)
+		err |= __put_user(regs->regs[i], &sc->sc_regs[i]);
+
+	err |= __put_user(regs->hi, &sc->sc_mdhi);
+	err |= __put_user(regs->lo, &sc->sc_mdlo);
+	if (cpu_has_dsp) {
+		err |= __put_user(rddsp(DSP_MASK), &sc->sc_dsp);
+		err |= __put_user(mfhi1(), &sc->sc_hi1);
+		err |= __put_user(mflo1(), &sc->sc_lo1);
+		err |= __put_user(mfhi2(), &sc->sc_hi2);
+		err |= __put_user(mflo2(), &sc->sc_lo2);
+		err |= __put_user(mfhi3(), &sc->sc_hi3);
+		err |= __put_user(mflo3(), &sc->sc_lo3);
+	}
+
+	used_math = !!used_math();
+	err |= __put_user(used_math, &sc->sc_used_math);
+
+	if (used_math) {
+		/*
+		 * Save FPU state to signal context.  Signal handler
+		 * will "inherit" current FPU state.
+		 */
+		err |= protected_save_fp_context32(sc);
+	}
+	return err;
+}
+
+static int
+check_and_restore_fp_context32(struct sigcontext32 __user *sc)
+{
+	int err, sig;
+
+	err = sig = fpcsr_pending(&sc->sc_fpc_csr);
+	if (err > 0)
+		err = 0;
+	err |= protected_restore_fp_context32(sc);
+	return err ?: sig;
+}
+
+static int restore_sigcontext32(struct pt_regs *regs,
+				struct sigcontext32 __user *sc)
+{
+	u32 used_math;
+	int err = 0;
+	s32 treg;
+	int i;
+
+	/* Always make any pending restarted system calls return -EINTR */
+	current_thread_info()->restart_block.fn = do_no_restart_syscall;
+
+	err |= __get_user(regs->cp0_epc, &sc->sc_pc);
+	err |= __get_user(regs->hi, &sc->sc_mdhi);
+	err |= __get_user(regs->lo, &sc->sc_mdlo);
+	if (cpu_has_dsp) {
+		err |= __get_user(treg, &sc->sc_hi1); mthi1(treg);
+		err |= __get_user(treg, &sc->sc_lo1); mtlo1(treg);
+		err |= __get_user(treg, &sc->sc_hi2); mthi2(treg);
+		err |= __get_user(treg, &sc->sc_lo2); mtlo2(treg);
+		err |= __get_user(treg, &sc->sc_hi3); mthi3(treg);
+		err |= __get_user(treg, &sc->sc_lo3); mtlo3(treg);
+		err |= __get_user(treg, &sc->sc_dsp); wrdsp(treg, DSP_MASK);
+	}
+
+	for (i = 1; i < 32; i++)
+		err |= __get_user(regs->regs[i], &sc->sc_regs[i]);
+
+	err |= __get_user(used_math, &sc->sc_used_math);
+	conditional_used_math(used_math);
+
+	if (used_math) {
+		/* restore fpu context if we have used it before */
+		if (!err)
+			err = check_and_restore_fp_context32(sc);
+	} else {
+		/* signal handler may have used FPU.  Give it up. */
+		lose_fpu(0);
+	}
+
+	return err;
+}
+
+/*
+ *
+ */
+extern void __put_sigset_unknown_nsig(void);
+extern void __get_sigset_unknown_nsig(void);
+
+static inline int put_sigset(const sigset_t *kbuf, compat_sigset_t __user *ubuf)
+{
+	int err = 0;
+
+	if (!access_ok(VERIFY_WRITE, ubuf, sizeof(*ubuf)))
+		return -EFAULT;
+
+	switch (_NSIG_WORDS) {
+	default:
+		__put_sigset_unknown_nsig();
+	case 2:
+		err |= __put_user(kbuf->sig[1] >> 32, &ubuf->sig[3]);
+		err |= __put_user(kbuf->sig[1] & 0xffffffff, &ubuf->sig[2]);
+	case 1:
+		err |= __put_user(kbuf->sig[0] >> 32, &ubuf->sig[1]);
+		err |= __put_user(kbuf->sig[0] & 0xffffffff, &ubuf->sig[0]);
+	}
+
+	return err;
+}
+
+static inline int get_sigset(sigset_t *kbuf, const compat_sigset_t __user *ubuf)
+{
+	int err = 0;
+	unsigned long sig[4];
+
+	if (!access_ok(VERIFY_READ, ubuf, sizeof(*ubuf)))
+		return -EFAULT;
+
+	switch (_NSIG_WORDS) {
+	default:
+		__get_sigset_unknown_nsig();
+	case 2:
+		err |= __get_user(sig[3], &ubuf->sig[3]);
+		err |= __get_user(sig[2], &ubuf->sig[2]);
+		kbuf->sig[1] = sig[2] | (sig[3] << 32);
+	case 1:
+		err |= __get_user(sig[1], &ubuf->sig[1]);
+		err |= __get_user(sig[0], &ubuf->sig[0]);
+		kbuf->sig[0] = sig[0] | (sig[1] << 32);
+	}
+
+	return err;
+}
 
 /*
  * Atomically swap in the new signal mask, and wait for a signal.
@@ -129,7 +314,7 @@ SYSCALL_DEFINE3(32_sigaction, long, sig, const struct compat_sigaction __user *,
 	return ret;
 }
 
-int copy_siginfo_to_user32(compat_siginfo_t __user *to, siginfo_t *from)
+int copy_siginfo_to_user32(compat_siginfo_t __user *to, const siginfo_t *from)
 {
 	int err;
 
@@ -373,42 +558,15 @@ struct mips_abi mips_abi_32 = {
 	.restart	= __NR_O32_restart_syscall
 };
 
-#ifdef CONFIG_SMP
-static int smp_save_fp_context32(struct sigcontext32 __user *sc)
-{
-	return raw_cpu_has_fpu
-	       ? _save_fp_context32(sc)
-	       : copy_fp_to_sigcontext32(sc);
-}
-
-static int smp_restore_fp_context32(struct sigcontext32 __user *sc)
-{
-	return raw_cpu_has_fpu
-	       ? _restore_fp_context32(sc)
-	       : copy_fp_from_sigcontext32(sc);
-}
-#endif
-
 static int signal32_init(void)
 {
-#ifndef CONFIG_EVA
-#ifdef CONFIG_SMP
-	/* For now just do the cpu_has_fpu check when the functions are invoked */
-	save_fp_context32 = smp_save_fp_context32;
-	restore_fp_context32 = smp_restore_fp_context32;
-#else
 	if (cpu_has_fpu) {
 		save_fp_context32 = _save_fp_context32;
 		restore_fp_context32 = _restore_fp_context32;
 	} else {
-		save_fp_context32 = copy_fp_to_sigcontext32;
-		restore_fp_context32 = copy_fp_from_sigcontext32;
+		save_fp_context32 = fpu_emulator_save_context32;
+		restore_fp_context32 = fpu_emulator_restore_context32;
 	}
-#endif /* CONFIG_SMP */
-#else
-	save_fp_context32 = copy_fp_to_sigcontext32;
-	restore_fp_context32 = copy_fp_from_sigcontext32;
-#endif /* CONFIG_EVA */
 
 	return 0;
 }

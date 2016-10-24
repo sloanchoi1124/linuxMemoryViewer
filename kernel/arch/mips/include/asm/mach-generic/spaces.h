@@ -6,7 +6,6 @@
  * Copyright (C) 1994 - 1999, 2000, 03, 04 Ralf Baechle
  * Copyright (C) 2000, 2002  Maciej W. Rozycki
  * Copyright (C) 1990, 1999, 2000 Silicon Graphics, Inc.
- * Copyright (C) 2015 Imagination Technologies
  */
 #ifndef _ASM_MACH_GENERIC_SPACES_H
 #define _ASM_MACH_GENERIC_SPACES_H
@@ -26,12 +25,8 @@
 #else
 #define CAC_BASE		_AC(0x80000000, UL)
 #endif
-#ifndef IO_BASE
 #define IO_BASE			_AC(0xa0000000, UL)
-#endif
-#ifndef UNCAC_BASE
 #define UNCAC_BASE		_AC(0xa0000000, UL)
-#endif
 
 #ifndef MAP_BASE
 #ifdef CONFIG_KVM_GUEST
@@ -54,9 +49,7 @@
 
 #ifndef CAC_BASE
 #ifdef CONFIG_DMA_NONCOHERENT
-#ifndef CONFIG_MIPS_CMP
 #define CAC_BASE		_AC(0x9800000000000000, UL)
-#endif
 #else
 #define CAC_BASE		_AC(0xa800000000000000, UL)
 #endif
@@ -98,21 +91,6 @@
 
 #ifndef FIXADDR_TOP
 #define FIXADDR_TOP		((unsigned long)(long)(int)0xfffe0000)
-#endif
-
-#ifndef in_module
-/*
- * If the Instruction Pointer is in module space (0xc0000000), return true;
- * otherwise, it is in kernel space (0x80000000), return false.
- *
- * FIXME: This will not work when the kernel space and module space are the
- * same. If they are the same, we need to modify scripts/recordmcount.pl,
- * ftrace_make_nop/call() and the other related parts to ensure the
- * enabling/disabling of the calling site to _mcount is right for both kernel
- * and module.
- *
- */
-#define in_module(ip)   (((unsigned long)ip) & 0x40000000)
 #endif
 
 #endif /* __ASM_MACH_GENERIC_SPACES_H */

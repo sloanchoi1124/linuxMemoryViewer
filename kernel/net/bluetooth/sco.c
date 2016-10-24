@@ -356,8 +356,10 @@ static void __sco_sock_close(struct sock *sk)
 		if (sco_pi(sk)->conn->hcon) {
 			sk->sk_state = BT_DISCONN;
 			sco_sock_set_timer(sk, SCO_DISCONN_TIMEOUT);
-			hci_conn_drop(sco_pi(sk)->conn->hcon);
-			sco_pi(sk)->conn->hcon = NULL;
+			if (sco_pi(sk)->conn->hcon != NULL) {
+				hci_conn_drop(sco_pi(sk)->conn->hcon);
+				sco_pi(sk)->conn->hcon = NULL;
+			}
 		} else
 			sco_chan_del(sk, ECONNRESET);
 		break;
@@ -717,7 +719,6 @@ static int sco_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 	    test_bit(BT_SK_DEFER_SETUP, &bt_sk(sk)->flags)) {
 		sco_conn_defer_accept(pi->conn->hcon, 0);
 		sk->sk_state = BT_CONFIG;
-		msg->msg_namelen = 0;
 
 		release_sock(sk);
 		return 0;

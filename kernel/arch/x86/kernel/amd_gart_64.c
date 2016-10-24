@@ -512,7 +512,7 @@ gart_free_coherent(struct device *dev, size_t size, void *vaddr,
 		   dma_addr_t dma_addr, struct dma_attrs *attrs)
 {
 	gart_unmap_page(dev, dma_addr, size, DMA_BIDIRECTIONAL, NULL);
-	dma_generic_free_coherent(dev, size, vaddr, dma_addr, attrs);
+	free_pages((unsigned long)vaddr, get_order(size));
 }
 
 static int gart_mapping_error(struct device *dev, dma_addr_t dma_addr)

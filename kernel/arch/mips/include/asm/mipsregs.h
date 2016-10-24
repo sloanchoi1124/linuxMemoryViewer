@@ -14,6 +14,7 @@
 #define _ASM_MIPSREGS_H
 
 #include <linux/linkage.h>
+#include <linux/types.h>
 #include <asm/hazards.h>
 #include <asm/war.h>
 
@@ -139,12 +140,6 @@
  * and should be written as zero.
  */
 #define FPU_CSR_RSVD	0x001c0000
-/* ... but FPU2 uses that bits */
-#define FPU_CSR_NAN2008 0x00040000
-#define FPU_CSR_ABS2008 0x00080000
-#define FPU_CSR_MAC2008 0x00100000
-
-#define FPU_CSR_DEFAULT 0x00000000
 
 /*
  * X the exception cause indicator
@@ -270,8 +265,6 @@
 #define PG_XIE		(_ULCAST_(1) <<	 30)
 #define PG_ELPA		(_ULCAST_(1) <<	 29)
 #define PG_ESP		(_ULCAST_(1) <<	 28)
-#define PG_IEC          (_ULCAST_(1) <<  27)
-#define PG_MCCAUSE      (_ULCAST_(0x1f) << 0)
 
 /*
  * R4x00 interrupt enable / cause bits
@@ -422,7 +415,6 @@
 #define ST0_BEV			0x00400000
 #define ST0_RE			0x02000000
 #define ST0_FR			0x04000000
-#define _ST0_FR                 (26)
 #define ST0_CU			0xf0000000
 #define ST0_CU0			0x10000000
 #define ST0_CU1			0x20000000
@@ -582,9 +574,7 @@
 #define MIPS_CONF1_IA		(_ULCAST_(7) << 16)
 #define MIPS_CONF1_IL		(_ULCAST_(7) << 19)
 #define MIPS_CONF1_IS		(_ULCAST_(7) << 22)
-#define MIPS_CONF1_TLBS_SHIFT   (25)
-#define MIPS_CONF1_TLBS_SIZE    (6)
-#define MIPS_CONF1_TLBS         (_ULCAST_(63)<< MIPS_CONF1_TLBS_SHIFT)
+#define MIPS_CONF1_TLBS		(_ULCAST_(63)<< 25)
 
 #define MIPS_CONF2_SA		(_ULCAST_(15)<<	 0)
 #define MIPS_CONF2_SL		(_ULCAST_(15)<<	 4)
@@ -598,80 +588,28 @@
 #define MIPS_CONF3_TL		(_ULCAST_(1) <<	 0)
 #define MIPS_CONF3_SM		(_ULCAST_(1) <<	 1)
 #define MIPS_CONF3_MT		(_ULCAST_(1) <<	 2)
-#define MIPS_CONF3_CDMM		(_ULCAST_(1) <<	 3)
 #define MIPS_CONF3_SP		(_ULCAST_(1) <<	 4)
 #define MIPS_CONF3_VINT		(_ULCAST_(1) <<	 5)
 #define MIPS_CONF3_VEIC		(_ULCAST_(1) <<	 6)
 #define MIPS_CONF3_LPA		(_ULCAST_(1) <<	 7)
-#define MIPS_CONF3_ITL		(_ULCAST_(1) <<	 8)
-#define MIPS_CONF3_CTXTC	(_ULCAST_(1) <<	 9)
 #define MIPS_CONF3_DSP		(_ULCAST_(1) << 10)
 #define MIPS_CONF3_DSP2P	(_ULCAST_(1) << 11)
 #define MIPS_CONF3_RXI		(_ULCAST_(1) << 12)
 #define MIPS_CONF3_ULRI		(_ULCAST_(1) << 13)
 #define MIPS_CONF3_ISA		(_ULCAST_(3) << 14)
-#define MIPS_CONF3_ISA_OE	(_ULCAST_(1) << 16)
-#define MIPS_CONF3_MCU		(_ULCAST_(1) << 17)
-#define MIPS_CONF3_MMAR		(_ULCAST_(7) << 18)
-#define MIPS_CONF3_IPLW		(_ULCAST_(3) << 21)
+#define MIPS_CONF3_ISA_OE	(_ULCAST_(3) << 16)
 #define MIPS_CONF3_VZ		(_ULCAST_(1) << 23)
-#define MIPS_CONF3_PW		(_ULCAST_(1) << 24)
-#define MIPS_CONF3_SC		(_ULCAST_(1) << 25)
-#define MIPS_CONF3_BI		(_ULCAST_(1) << 26)
-#define MIPS_CONF3_BP		(_ULCAST_(1) << 27)
-#define MIPS_CONF3_MSA		(_ULCAST_(1) << 28)
-#define MIPS_CONF3_CMGCR	(_ULCAST_(1) << 29)
-#define MIPS_CONF3_BPG		(_ULCAST_(1) << 30)
 
-#define MIPS_CONF4_MMUSIZEEXT_SHIFT	(0)
 #define MIPS_CONF4_MMUSIZEEXT	(_ULCAST_(255) << 0)
-#define MIPS_CONF4_FTLBSETS_SHIFT	(0)
-#define MIPS_CONF4_FTLBSETS	(_ULCAST_(15) << MIPS_CONF4_FTLBSETS_SHIFT)
-#define MIPS_CONF4_FTLBWAYS_SHIFT	(4)
-#define MIPS_CONF4_FTLBWAYS	(_ULCAST_(15) << MIPS_CONF4_FTLBWAYS_SHIFT)
-#define MIPS_CONF4_FTLBPAGESIZE_SHIFT	(8)
-#define MIPS_CONF4_FTLBPAGESIZE	(_ULCAST_(31) << MIPS_CONF4_FTLBPAGESIZE_SHIFT)
 #define MIPS_CONF4_MMUEXTDEF	(_ULCAST_(3) << 14)
 #define MIPS_CONF4_MMUEXTDEF_MMUSIZEEXT (_ULCAST_(1) << 14)
 
-#define MIPS_CONF4_MMUEXTDEF_FTLBSIZEEXT	(_ULCAST_(2) << 14)
-#define MIPS_CONF4_MMUEXTDEF_VTLBSIZEEXT	(_ULCAST_(3) << 14)
-#define MIPS_CONF4_KSCREXIST	(_ULCAST_(255) << 16)
-#define MIPS_CONF4_VTLBSIZEEXT_SHIFT	(24)
-#define MIPS_CONF4_VTLBSIZEEXT	(_ULCAST_(15) << MIPS_CONF4_VTLBSIZEEXT_SHIFT)
-#define MIPS_CONF4_AE		(_ULCAST_(1) << 28)
-#define MIPS_CONF4_IE           (_ULCAST_(3) << 29)
-#define MIPS_CONF4_TLBINV       (_ULCAST_(2) << 29)
-#define MIPS_CONF4_TLBINV_FULL  (_ULCAST_(1) << 29)
-
-#define MIPS_CONF5_NF		(_ULCAST_(1) << 0)
-#define MIPS_CONF5_UFR		(_ULCAST_(1) << 2)
-#define MIPS_CONF5_MRP          (_ULCAST_(1) << 3)
-#define MIPS_CONF5_VC           (_ULCAST_(1) << 7)
-#define MIPS_CONF5_FRE          (_ULCAST_(1) << 8)
-#define MIPS_CONF5_UFE          (_ULCAST_(1) << 9)
-#define MIPS_CONF5_L2C          (_ULCAST_(1) << 10)
-#define MIPS_CONF5_MSAEN	(_ULCAST_(1) << 27)
-#define MIPS_CONF5_EVA          (_ULCAST_(1) << 28)
-#define MIPS_CONF5_CV		(_ULCAST_(1) << 29)
-#define MIPS_CONF5_K		(_ULCAST_(1) << 30)
-
-#define MIPS_CONF6_JRCD		(_ULCAST_(1) << 0)
-#define MIPS_CONF6_JRCP		(_ULCAST_(1) << 1)
 #define MIPS_CONF6_SYND		(_ULCAST_(1) << 13)
-#define MIPS_CONF6_SPCD		(_ULCAST_(1) << 14)
-#define MIPS_CONF6_FTLBEN       (_ULCAST_(1) << 15)
 
 #define MIPS_CONF7_WII		(_ULCAST_(1) << 31)
-#define MIPS_CONF7_AR		(_ULCAST_(1) << 16)
-#define MIPS_CONF7_IAR		(_ULCAST_(1) << 10)
+
 #define MIPS_CONF7_RPS		(_ULCAST_(1) << 2)
 
-/*  EntryHI bit definition */
-#define MIPS_EHINV		(_ULCAST_(1) << 10)
-
-/*  HTW PTWCTL base definition - not yet for HUGE pages */
-#define HTW_PWCTL_BASE          (_ULCAST_(7) << 26) /* XK+XS+XU */
 
 /*
  * Bits in the MIPS32/64 coprocessor 1 (FPU) revision register.
@@ -683,83 +621,6 @@
 #define MIPS_FPIR_W		(_ULCAST_(1) << 20)
 #define MIPS_FPIR_L		(_ULCAST_(1) << 21)
 #define MIPS_FPIR_F64		(_ULCAST_(1) << 22)
-/* additional bits in MIPS32/64 coprocessor 2 (FPU) */
-#define MIPS_FPIR_HAS2008       (_ULCAST_(1) << 23)
-#define MIPS_FPIR_FC            (_ULCAST_(1) << 24)
-#define MIPS_FPIR_FREP          (_ULCAST_(1) << 29)
-
-/*
- * Bits in the MIPS32 Memory Segmentation registers.
- */
-#define MIPS_SEGCFG_PA_SHIFT	9
-#define MIPS_SEGCFG_PA		(_ULCAST_(127) << MIPS_SEGCFG_PA_SHIFT)
-#define MIPS_SEGCFG_AM_SHIFT	4
-#define MIPS_SEGCFG_AM		(_ULCAST_(7) << MIPS_SEGCFG_AM_SHIFT)
-#define MIPS_SEGCFG_EU_SHIFT	3
-#define MIPS_SEGCFG_EU		(_ULCAST_(1) << MIPS_SEGCFG_EU_SHIFT)
-#define MIPS_SEGCFG_C_SHIFT	0
-#define MIPS_SEGCFG_C		(_ULCAST_(7) << MIPS_SEGCFG_C_SHIFT)
-
-#define MIPS_SEGCFG_UUSK	_ULCAST_(7)
-#define MIPS_SEGCFG_USK		_ULCAST_(5)
-#define MIPS_SEGCFG_MUSUK	_ULCAST_(4)
-#define MIPS_SEGCFG_MUSK	_ULCAST_(3)
-#define MIPS_SEGCFG_MSK		_ULCAST_(2)
-#define MIPS_SEGCFG_MK		_ULCAST_(1)
-#define MIPS_SEGCFG_UK		_ULCAST_(0)
-
-/* ebase register bit definition */
-#define MIPS_EBASE_WG           (_ULCAST_(1) << 11)
-
-/* MAAR bits definitions */
-#define MIPS_MAAR_V             (_ULCAST_(1))
-#define MIPS_MAAR_S             (_ULCAST_(1) << 1)
-#define MIPS_MAAR_HI_V          (_ULCAST_(1) << 31)
-
-#define MIPS_MAAR_MAX           64
-
-#define MIPS_PWFIELD_BDI_SHIFT  32
-#define MIPS_PWFIELD_BDI_MASK   0x3f00000000UL
-#define MIPS_PWFIELD_GDI_SHIFT	24
-#define MIPS_PWFIELD_GDI_MASK	0x3f000000
-#define MIPS_PWFIELD_UDI_SHIFT	18
-#define MIPS_PWFIELD_UDI_MASK	0x00fc0000
-#define MIPS_PWFIELD_MDI_SHIFT	12
-#define MIPS_PWFIELD_MDI_MASK	0x0003f000
-#define MIPS_PWFIELD_PTI_SHIFT	6
-#define MIPS_PWFIELD_PTI_MASK	0x00000fc0
-#define MIPS_PWFIELD_PTEI_SHIFT	0
-#define MIPS_PWFIELD_PTEI_MASK	0x0000003f
-
-#define MIPS_PWSIZE_BDW_SHIFT   32
-#define MIPS_PWSIZE_BDW_MASK    0x3f00000000UL
-#define MIPS_PWSIZE_PS          0x40000000
-#define MIPS_PWSIZE_GDW_SHIFT	24
-#define MIPS_PWSIZE_GDW_MASK	0x3f000000
-#define MIPS_PWSIZE_UDW_SHIFT	18
-#define MIPS_PWSIZE_UDW_MASK	0x00fc0000
-#define MIPS_PWSIZE_MDW_SHIFT	12
-#define MIPS_PWSIZE_MDW_MASK	0x0003f000
-#define MIPS_PWSIZE_PTW_SHIFT	6
-#define MIPS_PWSIZE_PTW_MASK	0x00000fc0
-#define MIPS_PWSIZE_PTEW_SHIFT	0
-#define MIPS_PWSIZE_PTEW_MASK	0x0000003f
-
-#define MIPS_PWCTL_PWEN_SHIFT	31
-#define MIPS_PWCTL_PWEN_MASK	0x80000000
-#define MIPS_PWCTL_DPH_SHIFT	7
-#define MIPS_PWCTL_DPH_MASK	0x00000080
-#define MIPS_PWCTL_HUGEPG_SHIFT	6
-#define MIPS_PWCTL_HUGEPG_MASK	0x00000060
-#define MIPS_PWCTL_PSN_SHIFT	0
-#define MIPS_PWCTL_PSN_MASK	0x0000003f
-
-#define MIPS_GNR_VPID_SHIFT     (0)
-#define MIPS_GNR_VPID           (_ULCAST_(7) << MIPS_GNR_VPID_SHIFT)
-#define MIPS_GNR_CORE_SHIFT     (8)
-#define MIPS_GNR_CORE           (_ULCAST_(15) << MIPS_GNR_CORE_SHIFT)
-#define MIPS_GNR_CLUSTER_SHIFT  (16)
-#define MIPS_GNR_CLUSTER        (_ULCAST_(15) << MIPS_GNR_CLUSTER_SHIFT)
 
 #ifndef __ASSEMBLY__
 
@@ -1001,8 +862,6 @@ do {									\
 #define read_c0_entrylo1()	__read_ulong_c0_register($3, 0)
 #define write_c0_entrylo1(val)	__write_ulong_c0_register($3, 0, val)
 
-#define read_c0_gnr()           __read_32bit_c0_register($3, 1)
-
 #define read_c0_conf()		__read_32bit_c0_register($3, 0)
 #define write_c0_conf(val)	__write_32bit_c0_register($3, 0, val)
 
@@ -1072,8 +931,6 @@ do {									\
 #define write_c0_epc(val)	__write_ulong_c0_register($14, 0, val)
 
 #define read_c0_prid()		__read_32bit_c0_register($15, 0)
-#define read_c0_cmgcrbase()     __read_ulong_c0_register($15, 3)
-#define read_c0_bevva()         __read_ulong_c0_register($15, 4)
 
 #define read_c0_config()	__read_32bit_c0_register($16, 0)
 #define read_c0_config1()	__read_32bit_c0_register($16, 1)
@@ -1091,16 +948,6 @@ do {									\
 #define write_c0_config5(val)	__write_32bit_c0_register($16, 5, val)
 #define write_c0_config6(val)	__write_32bit_c0_register($16, 6, val)
 #define write_c0_config7(val)	__write_32bit_c0_register($16, 7, val)
-
-#define read_c0_lladdr()        __read_ulong_c0_register($17, 0)
-#define write_c0_lladdr(val)    __write_ulong_c0_register($17, 0, val)
-/*
- * MAAR registers
- */
-#define read_c0_maar()          __read_ulong_c0_register($17, 1)
-#define write_c0_maar(val)      __write_ulong_c0_register($17, 1, val)
-#define read_c0_maarindex()     __read_32bit_c0_register($17, 2)
-#define write_c0_maarindex(val) __write_32bit_c0_register($17, 2, val)
 
 /*
  * The WatchLo register.  There may be up to 8 of them.
@@ -1246,36 +1093,9 @@ do {									\
 #define read_c0_srsmap()	__read_32bit_c0_register($12, 3)
 #define write_c0_srsmap(val)	__write_32bit_c0_register($12, 3, val)
 
-#ifdef CONFIG_CPU_MIPS64_R6
-#define read_c0_ebase()         __read_ulong_c0_register($15, 1)
-#define write_c0_ebase(val)     __write_ulong_c0_register($15, 1, val)
-#else
 #define read_c0_ebase()		__read_32bit_c0_register($15, 1)
 #define write_c0_ebase(val)	__write_32bit_c0_register($15, 1, val)
-#endif
 
-/* MIPSR3 */
-#define read_c0_segctl0()	__read_32bit_c0_register($5, 2)
-#define write_c0_segctl0(val)	__write_32bit_c0_register($5, 2, val)
-
-#define read_c0_segctl1()	__read_32bit_c0_register($5, 3)
-#define write_c0_segctl1(val)	__write_32bit_c0_register($5, 3, val)
-
-#define read_c0_segctl2()	__read_32bit_c0_register($5, 4)
-#define write_c0_segctl2(val)	__write_32bit_c0_register($5, 4, val)
-
-/* Hardware Page Table Walker */
-#define read_c0_pwbase()	__read_ulong_c0_register($5, 5)
-#define write_c0_pwbase(val)	__write_ulong_c0_register($5, 5, val)
-
-#define read_c0_pwfield()	__read_ulong_c0_register($5, 6)
-#define write_c0_pwfield(val)	__write_ulong_c0_register($5, 6, val)
-
-#define read_c0_pwsize()	__read_ulong_c0_register($5, 7)
-#define write_c0_pwsize(val)	__write_ulong_c0_register($5, 7, val)
-
-#define read_c0_pwctl()		__read_32bit_c0_register($6, 6)
-#define write_c0_pwctl(val)	__write_32bit_c0_register($6, 6, val)
 
 /* Cavium OCTEON (cnMIPS) */
 #define read_c0_cvmcount()	__read_ulong_c0_register($9, 6)
@@ -1344,7 +1164,7 @@ do {									\
 /*
  * Macros to access the floating point coprocessor control registers
  */
-#define _read_32bit_cp1_register(source, gas_hardfloat)			\
+#define read_32bit_cp1_register(source)					\
 ({									\
 	int __res;							\
 									\
@@ -1354,47 +1174,12 @@ do {									\
 	"	# gas fails to assemble cfc1 for some archs,	\n"	\
 	"	# like Octeon.					\n"	\
 	"	.set	mips1					\n"	\
-	"       "STR(gas_hardfloat)"                            \n"     \
 	"	cfc1	%0,"STR(source)"			\n"	\
 	"	.set	pop					\n"	\
 	: "=r" (__res));						\
 	__res;								\
 })
 
-#ifdef GAS_HAS_SET_HARDFLOAT
-#define read_32bit_cp1_register(source)                                 \
-       _read_32bit_cp1_register(source, .set hardfloat)
-#else
-#define read_32bit_cp1_register(source)                                 \
-       _read_32bit_cp1_register(source, )
-#endif
-
-#define _write_32bit_cp1_register(dest, value , gas_hardfloat)          \
-({									\
-	__asm__ __volatile__(						\
-	"	.set	push					\n"	\
-	"	.set	reorder					\n"	\
-	"	# gas fails to assemble cfc1 for some archs,	\n"	\
-	"	# like Octeon.					\n"	\
-	"	.set	mips1					\n"	\
-	"       "STR(gas_hardfloat)"                            \n"     \
-	"       ctc1    %0,"STR(dest)"                          \n"     \
-	"	.set	pop					\n"	\
-	:: "r" (value));                                                \
-})
-
-#ifdef GAS_HAS_SET_HARDFLOAT
-#define write_32bit_cp1_register(dest, value)                           \
-       _write_32bit_cp1_register(dest, value, .set hardfloat)
-#else
-#define write_32bit_cp1_register(dest, value)                           \
-       _write_32bit_cp1_register(dest, value, )
-#endif
-
-#ifndef CONFIG_CPU_MIPSR6
-/*
- * Macros to access the DSP ASE registers
- */
 #ifdef HAVE_AS_DSP
 #define rddsp(mask)							\
 ({									\
@@ -1780,7 +1565,6 @@ do {									\
 
 #endif /* CONFIG_CPU_MICROMIPS */
 #endif
-#endif /* CONFIG_CPU_MIPSR6 */
 
 /*
  * TLB operations.
@@ -1846,12 +1630,6 @@ static inline void tlb_write_random(void)
 		".set noreorder\n\t"
 		"tlbwr\n\t"
 		".set reorder");
-}
-
-static inline void tlbinvf(void)
-{
-	__asm__ __volatile__(
-		".word 0x42000004");
 }
 
 /*
@@ -1946,8 +1724,7 @@ static inline void __ehb(void)
 {
 	__asm__ __volatile__(
 	"	.set	mips32r2					\n"
-	"       ehb                                                     \n"
-	"       .set    mips0                                           \n");
+	"	ehb							\n"		"	.set	mips0						\n");
 }
 
 /*
@@ -2019,7 +1796,6 @@ change_c0_##name(unsigned int change, unsigned int newbits)	\
 __BUILD_SET_C0(status)
 __BUILD_SET_C0(cause)
 __BUILD_SET_C0(config)
-__BUILD_SET_C0(config5)
 __BUILD_SET_C0(intcontrol)
 __BUILD_SET_C0(intctl)
 __BUILD_SET_C0(srsmap)

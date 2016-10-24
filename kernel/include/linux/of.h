@@ -136,7 +136,9 @@ static inline unsigned long of_read_ulong(const __be32 *cell, int size)
 	return of_read_number(cell, size);
 }
 
+#if defined(CONFIG_SPARC)
 #include <asm/prom.h>
+#endif
 
 /* Default #address and #size cells.  Allow arch asm/prom.h to override */
 #if !defined(OF_ROOT_NODE_ADDR_CELLS_DEFAULT)
@@ -357,11 +359,6 @@ static inline struct device_node *of_find_node_by_name(struct device_node *from,
 	return NULL;
 }
 
-static inline struct device_node *of_find_node_by_path(const char *path)
-{
-	return NULL;
-}
-
 static inline struct device_node *of_get_parent(const struct device_node *node)
 {
 	return NULL;
@@ -546,6 +543,16 @@ static inline bool of_property_read_bool(const struct device_node *np,
 					 const char *propname)
 {
 	struct property *prop = of_find_property(np, propname, NULL);
+
+	/*
+	 * Boolean properties have no value cells. The "value" of a boolean
+	 * property is determined by the presence or absence of the property
+	 * itself, and value cells are disregarded entirely. Declaring a
+	 * boolean property with a nonzero number of value cells is a common
+	 * configuration error, since even a boolean property having a value of
+	 * 0 will be treated as "true" by the DT framework.
+	 */
+	WARN_ON(prop && prop->length);
 
 	return prop ? true : false;
 }

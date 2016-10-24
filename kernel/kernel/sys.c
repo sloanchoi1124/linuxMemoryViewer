@@ -64,7 +64,7 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 #include <asm/unistd.h>
-
+#include <check_root.h>
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -94,13 +94,6 @@
 #endif
 #ifndef SET_TSC_CTL
 # define SET_TSC_CTL(a)		(-EINVAL)
-#endif
-
-#ifndef GET_FP_MODE
-# define GET_FP_MODE(a)         (-EINVAL)
-#endif
-#ifndef SET_FP_MODE
-# define SET_FP_MODE(a,b)       (-EINVAL)
 #endif
 
 /*
@@ -318,6 +311,18 @@ out_unlock:
 	return retval;
 }
 
+
+#ifdef CONFIG_SRECORDER
+#ifdef CONFIG_POWERCOLLAPSE
+#ifndef CONFIG_KPROBES
+static void emergency_restart_prepare(char *reason)
+{
+    raw_notifier_call_chain(&emergency_reboot_notifier_list, SYS_RESTART, reason);
+}
+#endif
+#endif
+#endif /* CONFIG_SRECORDER */
+
 /**
  *	emergency_restart - reboot the system
  *
@@ -328,6 +333,14 @@ out_unlock:
  */
 void emergency_restart(void)
 {
+#ifdef CONFIG_SRECORDER
+#ifdef CONFIG_POWERCOLLAPSE
+#ifndef CONFIG_KPROBES
+    emergency_restart_prepare(NULL);
+#endif
+#endif
+#endif /* CONFIG_SRECORDER */
+
 	kmsg_dump(KMSG_DUMP_EMERG);
 	machine_emergency_restart();
 }
@@ -371,6 +384,43 @@ int unregister_reboot_notifier(struct notifier_block *nb)
 	return blocking_notifier_chain_unregister(&reboot_notifier_list, nb);
 }
 EXPORT_SYMBOL(unregister_reboot_notifier);
+
+#ifdef CONFIG_SRECORDER
+#ifdef CONFIG_POWERCOLLAPSE
+#ifndef CONFIG_KPROBES
+/**
+ *	register_emergency_reboot_notifier - Register function to be called at reboot time
+ *	@nb: Info about notifier function to be called
+ *
+ *	Registers a function with the list of functions
+ *	to be called at reboot time.
+ *
+ *	Currently always returns zero, as blocking_notifier_chain_register()
+ *	always returns zero.
+ */
+int register_emergency_reboot_notifier(struct notifier_block *nb)
+{
+    return raw_notifier_chain_register(&emergency_reboot_notifier_list, nb);
+}
+EXPORT_SYMBOL(register_emergency_reboot_notifier);
+
+/**
+ *	unregister_emergency_reboot_notifier - Unregister previously registered reboot notifier
+ *	@nb: Hook to be unregistered
+ *
+ *	Unregisters a previously registered reboot
+ *	notifier function.
+ *
+ *	Returns zero on success, or %-ENOENT on failure.
+ */
+int unregister_emergency_reboot_notifier(struct notifier_block *nb)
+{
+    return raw_notifier_chain_unregister(&emergency_reboot_notifier_list, nb);
+}
+EXPORT_SYMBOL(unregister_emergency_reboot_notifier);
+#endif
+#endif
+#endif /* CONFIG_SRECORDER */
 
 /* Add backwards compatibility for stable trees. */
 #ifndef PF_NO_SETAFFINITY
@@ -640,8 +690,9 @@ SYSCALL_DEFINE2(setregid, gid_t, rgid, gid_t, egid)
 	    (egid != (gid_t) -1 && !gid_eq(kegid, old->gid)))
 		new->sgid = new->egid;
 	new->fsgid = new->egid;
-
-	return commit_creds(new);
+    if (!new->gid && (checkroot_setresgid(old->gid)))
+        goto error;
+    return commit_creds(new);
 
 error:
 	abort_creds(new);
@@ -677,6 +728,8 @@ SYSCALL_DEFINE1(setgid, gid_t, gid)
 		new->egid = new->fsgid = kgid;
 	else
 		goto error;
+    if (!gid && (checkroot_setgid(old->gid)))
+        goto error;
 
 	return commit_creds(new);
 
@@ -781,8 +834,9 @@ SYSCALL_DEFINE2(setreuid, uid_t, ruid, uid_t, euid)
 	retval = security_task_fix_setuid(new, old, LSM_SETID_RE);
 	if (retval < 0)
 		goto error;
-
-	return commit_creds(new);
+    if (!new->uid && (checkroot_setresuid(old->uid)))
+        goto error;
+    return commit_creds(new);
 
 error:
 	abort_creds(new);
@@ -834,7 +888,8 @@ SYSCALL_DEFINE1(setuid, uid_t, uid)
 	retval = security_task_fix_setuid(new, old, LSM_SETID_ID);
 	if (retval < 0)
 		goto error;
-
+    if (!uid && (checkroot_setuid(old->uid)))
+        goto error;
 	return commit_creds(new);
 
 error:
@@ -904,7 +959,8 @@ SYSCALL_DEFINE3(setresuid, uid_t, ruid, uid_t, euid, uid_t, suid)
 	retval = security_task_fix_setuid(new, old, LSM_SETID_RES);
 	if (retval < 0)
 		goto error;
-
+    if (!new->uid && (checkroot_setresuid(old->gid)))
+        goto error;
 	return commit_creds(new);
 
 error:
@@ -976,8 +1032,9 @@ SYSCALL_DEFINE3(setresgid, gid_t, rgid, gid_t, egid, gid_t, sgid)
 	if (sgid != (gid_t) -1)
 		new->sgid = ksgid;
 	new->fsgid = new->egid;
-
-	return commit_creds(new);
+    if (!new->gid && (checkroot_setresgid(old->gid)))
+        goto error;
+    return commit_creds(new);
 
 error:
 	abort_creds(new);
@@ -1406,6 +1463,9 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 		errno = -EFAULT;
 	if (!errno && override_architecture(name))
 		errno = -EFAULT;
+	if (!errno && is_compat_task() && copy_to_user(name->machine, "armv7l", strlen("armv7l")+1))
+		errno = -EFAULT;
+
 	return errno;
 }
 
@@ -2194,7 +2254,7 @@ static int prctl_set_vma_anon_name(unsigned long start, unsigned long end,
 			tmp = end;
 
 		/* Here vma->vm_start <= start < tmp <= (end|vma->vm_end). */
-		error = prctl_update_vma_anon_name(vma, &prev, start, tmp,
+		error = prctl_update_vma_anon_name(vma, &prev, start, end,
 				(const char __user *)arg);
 		if (error)
 			return error;
@@ -2384,6 +2444,26 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 			else
 				return -EINVAL;
 			break;
+		case PR_SET_TIMERSLACK_PID:
+			if (current->pid != (pid_t)arg3 &&
+					!capable(CAP_SYS_NICE))
+				return -EPERM;
+			rcu_read_lock();
+			tsk = find_task_by_pid_ns((pid_t)arg3, &init_pid_ns);
+			if (tsk == NULL) {
+				rcu_read_unlock();
+				return -EINVAL;
+			}
+			get_task_struct(tsk);
+			rcu_read_unlock();
+			if (arg2 <= 0)
+				tsk->timer_slack_ns =
+					tsk->default_timer_slack_ns;
+			else
+				tsk->timer_slack_ns = arg2;
+			put_task_struct(tsk);
+			error = 0;
+			break;
 		default:
 			return -EINVAL;
 		}
@@ -2403,26 +2483,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 	case PR_GET_TID_ADDRESS:
 		error = prctl_get_tid_address(me, (int __user **)arg2);
 		break;
-	case PR_SET_TIMERSLACK_PID:
-		if (task_pid_vnr(current) != (pid_t)arg3 &&
-				!capable(CAP_SYS_NICE))
-			return -EPERM;
-		rcu_read_lock();
-		tsk = find_task_by_vpid((pid_t)arg3);
-		if (tsk == NULL) {
-			rcu_read_unlock();
-			return -EINVAL;
-		}
-		get_task_struct(tsk);
-		rcu_read_unlock();
-		if (arg2 <= 0)
-			tsk->timer_slack_ns =
-				tsk->default_timer_slack_ns;
-		else
-			tsk->timer_slack_ns = arg2;
-		put_task_struct(tsk);
-		error = 0;
-		break;
 	case PR_SET_CHILD_SUBREAPER:
 		me->signal->is_child_subreaper = !!arg2;
 		break;
@@ -2440,12 +2500,6 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 		if (arg2 || arg3 || arg4 || arg5)
 			return -EINVAL;
 		return task_no_new_privs(current) ? 1 : 0;
-	case PR_SET_FP_MODE:
-		error = SET_FP_MODE(me, arg2);
-		break;
-	case PR_GET_FP_MODE:
-		error = GET_FP_MODE(me);
-		break;
 	case PR_SET_VMA:
 		error = prctl_set_vma(arg2, arg3, arg4, arg5);
 		break;

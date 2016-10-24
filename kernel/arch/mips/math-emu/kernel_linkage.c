@@ -27,52 +27,89 @@
 #include <asm/fpu.h>
 #include <asm/fpu_emulator.h>
 
-#define SIGNALLING_NAN      0x7ff800007ff80000LL
-#define SIGNALLING_NAN2008  0x7ff000007fa00000LL
+#define SIGNALLING_NAN 0x7ff800007ff80000LL
 
-extern unsigned int fpu_fcr31 __read_mostly;
-extern unsigned int system_has_fpu __read_mostly;
-static int nan2008 __read_mostly = -1;
-
-static int __init setup_nan2008(char *str)
-{
-	get_option (&str, &nan2008);
-
-	return 1;
-}
-
-__setup("nan2008=", setup_nan2008);
-
-void fpu_emulator_init_fpu(struct task_struct *target)
+void fpu_emulator_init_fpu(void)
 {
 	static int first = 1;
 	int i;
-	int j;
 
 	if (first) {
 		first = 0;
 		printk("Algorithmics/MIPS FPU Emulator v1.5\n");
 	}
 
-	if (system_has_fpu)
-		target->thread.fpu.fcr31 = fpu_fcr31;
-	else if (nan2008 < 0) {
-		if (test_thread_local_flags(LTIF_FPU_FR))
-			target->thread.fpu.fcr31 = FPU_CSR_DEFAULT|FPU_CSR_MAC2008|FPU_CSR_ABS2008|FPU_CSR_NAN2008;
-		else
-			target->thread.fpu.fcr31 = FPU_CSR_DEFAULT;
-	} else {
-		if (nan2008)
-			target->thread.fpu.fcr31 = FPU_CSR_DEFAULT|FPU_CSR_MAC2008|FPU_CSR_ABS2008|FPU_CSR_NAN2008;
-		else
-			target->thread.fpu.fcr31 = FPU_CSR_DEFAULT;
+	current->thread.fpu.fcr31 = 0;
+	for (i = 0; i < 32; i++) {
+		current->thread.fpu.fpr[i] = SIGNALLING_NAN;
 	}
-
-	if (target->thread.fpu.fcr31 & FPU_CSR_NAN2008) {
-		for (j = 0; j < (FPU_REG_WIDTH/64); j++)
-			for (i = 0; i < NUM_FPU_REGS; i++)
-				set_fpr64(&target->thread.fpu.fpr[i], j, SIGNALLING_NAN2008);
-	} else
-		for (i = 0; i < NUM_FPU_REGS; i++)
-			set_fpr64(&target->thread.fpu.fpr[i], 0, SIGNALLING_NAN);
 }
+
+
+/*
+ * Emulator context save/restore to/from a signal context
+ * presumed to be on the user stack, and therefore accessed
+ * with appropriate macros from uaccess.h
+ */
+
+int fpu_emulator_save_context(struct sigcontext __user *sc)
+{
+	int i;
+	int err = 0;
+
+	for (i = 0; i < 32; i++) {
+		err |=
+		    __put_user(current->thread.fpu.fpr[i], &sc->sc_fpregs[i]);
+	}
+	err |= __put_user(current->thread.fpu.fcr31, &sc->sc_fpc_csr);
+
+	return err;
+}
+
+int fpu_emulator_restore_context(struct sigcontext __user *sc)
+{
+	int i;
+	int err = 0;
+
+	for (i = 0; i < 32; i++) {
+		err |=
+		    __get_user(current->thread.fpu.fpr[i], &sc->sc_fpregs[i]);
+	}
+	err |= __get_user(current->thread.fpu.fcr31, &sc->sc_fpc_csr);
+
+	return err;
+}
+
+#ifdef CONFIG_64BIT
+/*
+ * This is the o32 version
+ */
+
+int fpu_emulator_save_context32(struct sigcontext32 __user *sc)
+{
+	int i;
+	int err = 0;
+
+	for (i = 0; i < 32; i+=2) {
+		err |=
+		    __put_user(current->thread.fpu.fpr[i], &sc->sc_fpregs[i]);
+	}
+	err |= __put_user(current->thread.fpu.fcr31, &sc->sc_fpc_csr);
+
+	return err;
+}
+
+int fpu_emulator_restore_context32(struct sigcontext32 __user *sc)
+{
+	int i;
+	int err = 0;
+
+	for (i = 0; i < 32; i+=2) {
+		err |=
+		    __get_user(current->thread.fpu.fpr[i], &sc->sc_fpregs[i]);
+	}
+	err |= __get_user(current->thread.fpu.fcr31, &sc->sc_fpc_csr);
+
+	return err;
+}
+#endif

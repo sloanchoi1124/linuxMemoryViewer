@@ -2695,6 +2695,7 @@ static void mmc_test_run(struct mmc_test_card *test, int testcase)
 	pr_info("%s: Starting tests of card %s...\n",
 		mmc_hostname(test->card->host), mmc_card_id(test->card));
 
+	mmc_rpm_hold(test->card->host, &test->card->dev);
 	mmc_claim_host(test->card->host);
 
 	for (i = 0;i < ARRAY_SIZE(mmc_test_cases);i++) {
@@ -2778,6 +2779,7 @@ static void mmc_test_run(struct mmc_test_card *test, int testcase)
 	}
 
 	mmc_release_host(test->card->host);
+	mmc_rpm_release(test->card->host, &test->card->dev);
 
 	pr_info("%s: Tests completed.\n",
 		mmc_hostname(test->card->host));
@@ -2890,7 +2892,8 @@ static ssize_t mtf_test_write(struct file *file, const char __user *buf,
 	}
 
 #ifdef CONFIG_HIGHMEM
-	__free_pages(test->highmem, BUFFER_ORDER);
+	if (test->highmem)
+		__free_pages(test->highmem, BUFFER_ORDER);
 #endif
 	kfree(test->buffer);
 	kfree(test);
@@ -3025,17 +3028,12 @@ static void mmc_test_remove(struct mmc_card *card)
 	mmc_test_free_dbgfs_file(card);
 }
 
-static void mmc_test_shutdown(struct mmc_card *card)
-{
-}
-
 static struct mmc_driver mmc_driver = {
 	.drv		= {
 		.name	= "mmc_test",
 	},
 	.probe		= mmc_test_probe,
 	.remove		= mmc_test_remove,
-	.shutdown	= mmc_test_shutdown,
 };
 
 static int __init mmc_test_init(void)

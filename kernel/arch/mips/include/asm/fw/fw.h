@@ -14,12 +14,11 @@ enum fw_memtypes {
 	fw_dontuse,
 	fw_code,
 	fw_free,
-	fw_inuse,
 };
 
 typedef struct {
 	unsigned long base;	/* Within KSEG0 */
-	unsigned long size;     /* bytes */
+	unsigned int size;	/* bytes */
 	enum fw_memtypes type;	/* fw_memtypes */
 } fw_memblock_t;
 

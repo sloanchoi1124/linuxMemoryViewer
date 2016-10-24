@@ -116,7 +116,7 @@ static void __init ebsa110_map_io(void)
 	iotable_init(ebsa110_io_desc, ARRAY_SIZE(ebsa110_io_desc));
 }
 
-static void __iomem *ebsa110_ioremap_caller(unsigned long cookie, size_t size,
+static void __iomem *ebsa110_ioremap_caller(phys_addr_t cookie, size_t size,
 					    unsigned int flags, void *caller)
 {
 	return (void __iomem *)cookie;
@@ -311,7 +311,7 @@ static int __init ebsa110_init(void)
 
 arch_initcall(ebsa110_init);
 
-static void ebsa110_restart(char mode, const char *cmd)
+static void ebsa110_restart(enum reboot_mode mode, const char *cmd)
 {
 	soft_restart(0x80000000);
 }

@@ -158,16 +158,4 @@
 #define PR_SET_VMA		0x53564d41
 # define PR_SET_VMA_ANON_NAME		0
 
-#define PR_SET_FP_MODE      45
-#define PR_GET_FP_MODE      46
-# define PR_FP_MODE_FR      (1 << 0)    /* 64b FP registers */
-# define PR_FP_MODE_FRE     (1 << 1)    /* 32b compatibility */
-
-/* Control the ambient capability set */
-#define PR_CAP_AMBIENT			47
-# define PR_CAP_AMBIENT_IS_SET		1
-# define PR_CAP_AMBIENT_RAISE		2
-# define PR_CAP_AMBIENT_LOWER		3
-# define PR_CAP_AMBIENT_CLEAR_ALL	4
-
 #endif /* _LINUX_PRCTL_H */

@@ -35,10 +35,10 @@ static __inline__ long local_add_return(long i, local_t * l)
 		__asm__ __volatile__(
 		"	.set	mips3					\n"
 		"1:"	__LL	"%1, %2		# local_add_return	\n"
-			__ADDU  "%0, %1, %3                             \n"
+		"	addu	%0, %1, %3				\n"
 			__SC	"%0, %2					\n"
 		"	beqzl	%0, 1b					\n"
-			__ADDU  "%0, %1, %3                             \n"
+		"	addu	%0, %1, %3				\n"
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "=m" (l->a.counter)
 		: "Ir" (i), "m" (l->a.counter)
@@ -47,16 +47,12 @@ static __inline__ long local_add_return(long i, local_t * l)
 		unsigned long temp;
 
 		__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-		"       .set    mips64r6                                \n"
-#else
-		"       .set    mips3                                   \n"
-#endif
-		"1:"    __LL    "%1, %2         # local_add_return      \n"
-			__ADDU  "%0, %1, %3                             \n"
+		"	.set	mips3					\n"
+		"1:"	__LL	"%1, %2		# local_add_return	\n"
+		"	addu	%0, %1, %3				\n"
 			__SC	"%0, %2					\n"
 		"	beqz	%0, 1b					\n"
-			__ADDU  "%0, %1, %3                             \n"
+		"	addu	%0, %1, %3				\n"
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "=m" (l->a.counter)
 		: "Ir" (i), "m" (l->a.counter)
@@ -84,10 +80,10 @@ static __inline__ long local_sub_return(long i, local_t * l)
 		__asm__ __volatile__(
 		"	.set	mips3					\n"
 		"1:"	__LL	"%1, %2		# local_sub_return	\n"
-			__SUBU  "%0, %1, %3                             \n"
+		"	subu	%0, %1, %3				\n"
 			__SC	"%0, %2					\n"
 		"	beqzl	%0, 1b					\n"
-			__SUBU  "%0, %1, %3                             \n"
+		"	subu	%0, %1, %3				\n"
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "=m" (l->a.counter)
 		: "Ir" (i), "m" (l->a.counter)
@@ -96,16 +92,12 @@ static __inline__ long local_sub_return(long i, local_t * l)
 		unsigned long temp;
 
 		__asm__ __volatile__(
-#ifdef CONFIG_CPU_MIPSR6
-		"       .set    mips64r6                                \n"
-#else
 		"	.set	mips3					\n"
-#endif
-		"1:"    __LL    "%1, %2         # local_sub_return      \n"
-			__SUBU  "%0, %1, %3                             \n"
+		"1:"	__LL	"%1, %2		# local_sub_return	\n"
+		"	subu	%0, %1, %3				\n"
 			__SC	"%0, %2					\n"
 		"	beqz	%0, 1b					\n"
-			__SUBU  "%0, %1, %3                             \n"
+		"	subu	%0, %1, %3				\n"
 		"	.set	mips0					\n"
 		: "=&r" (result), "=&r" (temp), "=m" (l->a.counter)
 		: "Ir" (i), "m" (l->a.counter)

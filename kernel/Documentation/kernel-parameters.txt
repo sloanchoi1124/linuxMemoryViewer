@@ -46,7 +46,6 @@ parameter is applicable:
 	BLACKFIN Blackfin architecture is enabled.
 	CLK	Common clock infrastructure is enabled.
 	CMA	Contiguous Memory Area support is enabled.
-	DM	Device mapper support is enabled.
 	DRM	Direct Rendering Management support is enabled.
 	DYNAMIC_DEBUG Build in debug messages and enable them at runtime
 	EDD	BIOS Enhanced Disk Drive Services (EDD) is enabled
@@ -430,6 +429,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			Format: <io>,<irq>,<mode>
 			See header of drivers/net/hamradio/baycom_ser_hdx.c.
 
+	boot_cpus=	[SMP]
+			Rather than attempting to online all possible CPUs at
+			boot time, only online the specified set of CPUs.
+
 	boot_delay=	Milliseconds to delay each printk during boot.
 			Values larger than 10 seconds (10000) are changed to
 			no delay (0).
@@ -741,11 +744,6 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 	disable_timer_pin_1 [X86]
 			Disable PIN 1 of APIC timer
 			Can be useful to work around chipset bugs.
-
-	dm=		[DM] Allows early creation of a device-mapper device.
-			See Documentation/device-mapper/boot.txt.
-
-	dmasound=	[HW,OSS] Sound subsystem buffers
 
 	dma_debug=off	If the kernel is compiled with DMA_API_DEBUG support,
 			this option disables the debugging code at boot.
@@ -1461,6 +1459,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 			  hot-unplug link recovery
 
 			* dump_id: dump IDENTIFY data.
+
+			* atapi_dmadir: Enable ATAPI DMADIR bridge support
+
+			* disable: Disable this device.
 
 			If there are multiple matching configurations changing
 			the same attribute, the last one is used.
@@ -2870,6 +2872,10 @@ bytes respectively. Such letter suffixes can also be entirely omitted.
 				0: Toshiba Satellite 1800 (GP data pin select)
 				1: Fast pin select (default)
 				2: ATC IRMode
+
+	snddev_icodec.msm_codec_i2s_slave_mode= [ARM-MSM]
+			1, codec is I2S master
+			0, MSM is I2S master (default)
 
 	softlockup_panic=
 			[KNL] Should the soft-lockup detector generate panics.

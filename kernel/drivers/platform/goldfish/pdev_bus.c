@@ -36,7 +36,6 @@
 #define PDEV_BUS_IO_SIZE        (0x14)
 #define PDEV_BUS_IRQ            (0x18)
 #define PDEV_BUS_IRQ_COUNT      (0x1c)
-#define PDEV_BUS_GET_NAME_HIGH  (0x20)
 
 struct pdev_bus_dev {
 	struct list_head list;
@@ -130,10 +129,7 @@ static int goldfish_new_pdev(void)
 	dev->pdev.dev.dma_mask = (void *)(dev->pdev.name + name_len + 1);
 	*dev->pdev.dev.dma_mask = ~0;
 
-#ifdef CONFIG_64BIT
-	writel((u32)((u64)name>>32), pdev_bus_base + PDEV_BUS_GET_NAME_HIGH);
-#endif
-	writel((u32)(u64)name, pdev_bus_base + PDEV_BUS_GET_NAME);
+	writel((unsigned long)name, pdev_bus_base + PDEV_BUS_GET_NAME);
 	name[name_len] = '\0';
 	dev->pdev.id = readl(pdev_bus_base + PDEV_BUS_ID);
 	dev->pdev.resource[0].start = base;
@@ -187,6 +183,11 @@ static int goldfish_pdev_bus_probe(struct platform_device *pdev)
 
 	pdev_bus_addr = r->start;
 	pdev_bus_len = resource_size(r);
+
+	if (request_mem_region(pdev_bus_addr, pdev_bus_len, "goldfish")) {
+		dev_err(&pdev->dev, "unable to reserve Goldfish MMIO.\n");
+		return -EBUSY;
+	}
 
 	pdev_bus_base = ioremap(pdev_bus_addr, pdev_bus_len);
 	if (pdev_bus_base == NULL) {

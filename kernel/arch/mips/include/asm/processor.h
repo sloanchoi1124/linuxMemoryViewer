@@ -40,7 +40,7 @@ extern unsigned int vced_count, vcei_count;
  * A special page (the vdso) is mapped into all processes at the very
  * top of the virtual memory space.
  */
-#define SPECIAL_PAGES_SIZE (PAGE_SIZE * 2)
+#define SPECIAL_PAGES_SIZE PAGE_SIZE
 
 #ifdef CONFIG_32BIT
 #ifdef CONFIG_KVM_GUEST
@@ -71,11 +71,7 @@ extern unsigned int vced_count, vcei_count;
  * 8192EB ...
  */
 #define TASK_SIZE32	0x7fff8000UL
-#ifdef CONFIG_48VMBITS
-#define TASK_SIZE64     (0x1UL << ((cpu_data[0].vmbits>48)?48:cpu_data[0].vmbits))
-#else
-#define TASK_SIZE64     (0x10000000000UL)
-#endif
+#define TASK_SIZE64	0x10000000000UL
 #define TASK_SIZE (test_thread_flag(TIF_32BIT_ADDR) ? TASK_SIZE32 : TASK_SIZE64)
 
 #ifdef __KERNEL__
@@ -101,39 +97,7 @@ extern unsigned int vced_count, vcei_count;
 
 #define NUM_FPU_REGS	32
 
-#ifdef CONFIG_CPU_HAS_MSA
-# define FPU_REG_WIDTH	128
-#else
-# define FPU_REG_WIDTH	64
-#endif
-
-union fpureg {
-	__u8    val8[FPU_REG_WIDTH / 8];
-	__u16   val16[FPU_REG_WIDTH / 16];
-	__u32	val32[FPU_REG_WIDTH / 32];
-	__u64	val64[FPU_REG_WIDTH / 64];
-};
-
-#ifdef CONFIG_CPU_LITTLE_ENDIAN
-# define FPR_IDX(width, idx)	(idx)
-#else
-# define FPR_IDX(width, idx)	((idx) ^ ((64 / (width)) - 1))
-#endif
-
-#define BUILD_FPR_ACCESS(width) \
-static inline u##width get_fpr##width(union fpureg *fpr, unsigned idx)	\
-{									\
-	return fpr->val##width[FPR_IDX(width, idx)];			\
-}									\
-									\
-static inline void set_fpr##width(union fpureg *fpr, unsigned idx,	\
-				  u##width val)				\
-{									\
-	fpr->val##width[FPR_IDX(width, idx)] = val;			\
-}
-
-BUILD_FPR_ACCESS(32)
-BUILD_FPR_ACCESS(64)
+typedef __u64 fpureg_t;
 
 /*
  * It would be nice to add some more fields for emulator statistics, but there
@@ -143,9 +107,8 @@ BUILD_FPR_ACCESS(64)
  */
 
 struct mips_fpu_struct {
-	union fpureg	fpr[NUM_FPU_REGS];
+	fpureg_t	fpr[NUM_FPU_REGS];
 	unsigned int	fcr31;
-	unsigned int	msacsr;
 };
 
 #define NUM_DSP_REGS   6
@@ -232,13 +195,7 @@ typedef struct {
 	unsigned long seg;
 } mm_segment_t;
 
-#ifdef CONFIG_CPU_HAS_MSA
-# define ARCH_MIN_TASKALIGN	16
-# define FPU_ALIGN		__aligned(16)
-#else
-# define ARCH_MIN_TASKALIGN	8
-# define FPU_ALIGN
-#endif
+#define ARCH_MIN_TASKALIGN	8
 
 struct mips_abi;
 
@@ -255,7 +212,7 @@ struct thread_struct {
 	unsigned long cp0_status;
 
 	/* Saved fpu/fpu emulator stuff. */
-	struct mips_fpu_struct fpu FPU_ALIGN;
+	struct mips_fpu_struct fpu;
 #ifdef CONFIG_MIPS_MT_FPAFF
 	/* Emulated instruction count */
 	unsigned long emulated_fp;
@@ -318,9 +275,8 @@ struct thread_struct {
 	 * Saved FPU/FPU emulator stuff				\
 	 */							\
 	.fpu			= {				\
-		.fpr		= {{{0,},},},			\
+		.fpr		= {0,},				\
 		.fcr31		= 0,				\
-		.msacsr		= 0,				\
 	},							\
 	/*							\
 	 * FPU affinity state (null if not FPAFF)		\
@@ -401,17 +357,5 @@ unsigned long get_wchan(struct task_struct *p);
 #define __ARCH_WANT_UNLOCKED_CTXSW
 
 #endif
-
-/*
- * Functions & macros implementing the PR_GET_FP_MODE & PR_SET_FP_MODE options
- * to the prctl syscall.
- */
-extern long mips_get_process_fp_mode(struct task_struct *task);
-extern long mips_set_process_fp_mode(struct task_struct *task,
-				     unsigned long value);
-
-#define GET_FP_MODE(task)           mips_get_process_fp_mode(task)
-#define SET_FP_MODE(task,value)     mips_set_process_fp_mode(task, value)
-
 
 #endif /* _ASM_PROCESSOR_H */
