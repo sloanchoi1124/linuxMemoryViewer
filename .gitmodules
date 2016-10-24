@@ -1,3 +1,9 @@
 [submodule "user/aosp/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9"]
 	path = user/aosp/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
 	url = https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
+[submodule "tools/boot.img"]
+	path = tools/boot.img
+	url = https://github.com/W4118/bootimg.git
+[submodule "user/cm/system/core"]
+	path = user/cm/system/core
+	url = https://github.com/CyanogenMod/android_system_core.git
