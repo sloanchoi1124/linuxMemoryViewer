@@ -206,8 +206,8 @@ void huawei_restart(void)
 {
     struct bootloader_message boot;
     int fd  = 0;
-    
-    memset((void*)&boot, 0x0, sizeof(struct bootloader_message));    
+
+    memset((void*)&boot, 0x0, sizeof(struct bootloader_message));
     strlcpy(boot.command, "boot-recovery", sizeof(boot.command));
     strcpy(boot.recovery, "recovery\n");
     strcat(boot.recovery, "--");
@@ -227,7 +227,7 @@ void huawei_restart(void)
     sys_sync();
     kernel_restart(NULL);
 }
-/*This function poll the address restart_reason,if 
+/*This function poll the address restart_reason,if
    there is the magic SDUPDATE_FLAG_MAGIC_NUM, restart
    the devices.,the magic is written by modem when the
    user click the usb update tool to update*/
@@ -380,8 +380,8 @@ static void msm_restart_prepare(const char *cmd)
 
 #ifdef CONFIG_HUAWEI_FEATURE_NFF
 	clear_bootup_flag();
-#endif     
-	need_warm_reset = (in_panic || get_dload_mode() ||
+#endif
+	need_warm_reset = true || (in_panic || get_dload_mode() ||
 				(cmd != NULL && cmd[0] != '\0'));
 
 	if (qpnp_pon_check_hard_reset_stored()) {
@@ -597,7 +597,7 @@ static int msm_restart_probe(struct platform_device *pdev)
 		if (!emergency_dload_mode_addr)
 			pr_err("unable to map imem EDLOAD mode offset\n");
 	}
-#ifdef CONFIG_HUAWEI_DEBUG_MODE		
+#ifdef CONFIG_HUAWEI_DEBUG_MODE
 	if(strstr(saved_command_line,"huawei_debug_mode=1")!=NULL
 	    || strstr(saved_command_line,"emcno=1")!=NULL)
 	{
