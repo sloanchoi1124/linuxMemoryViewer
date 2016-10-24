@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIR="$(dirname $(readlink -f $0))"
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+OUT="${DIR}/../build-${BRANCH}/kernel"
+
+mkdir -p "$OUT"
+
+make O="$OUT" ARCH=arm64 CROSS_COMPILE=$DIR/../user/aosp/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android- "$@"
+
