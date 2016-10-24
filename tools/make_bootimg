@@ -1,0 +1,10 @@
+#!/bin/bash
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+DIR="$(dirname $(readlink -f $0))"
+IMG="${DIR}/../build-${BRANCH}/boot.img"
+KERNEL=${KERNEL-"${DIR}/../build-${BRANCH}/kernel/arch/arm64/boot/Image"}
+PREFIX="${DIR}/boot.img/boot.img"
+set -x
+
+"${DIR}/../user/cm/system/core/mkbootimg/mkbootimg" --kernel "${KERNEL}" --ramdisk ${PREFIX}-ramdisk.gz --second ${PREFIX}-second --cmdline "$(< ${PREFIX}-cmdline)" --base "0x$(< ${PREFIX}-base)" --kernel_offset "0x$(< ${PREFIX}-kernel_offset)" --ramdisk_offset "0x$(< ${PREFIX}-ramdisk_offset)" --second_offset "0x$(< ${PREFIX}-second_offset)" --tags_offset "0x$(< ${PREFIX}-tags_offset)" --pagesize "$(< ${PREFIX}-pagesize)" --dt ${PREFIX}-dt -o "${IMG}"
