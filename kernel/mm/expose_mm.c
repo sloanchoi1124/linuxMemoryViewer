@@ -6,20 +6,59 @@
 #include <linux/syscalls.h>
 #include <asm/page.h>
 #include <asm/memory.h>
-/*
-int pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next, 
-	      struct mm_walk *walk);
-int pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next, 
-	      struct mm_walk *walk);
-*/
+#include <asm/uaccess.h>
+
 struct walk_info {
-	pgd_t *kernel_pgd_va_base;
-	pmd_t *kernel_pmd_va_base;
+	unsigned long user_fake_pgd_base;
 	unsigned long user_fake_pmd_base;
+	unsigned long user_fake_pte_base;
+	unsigned long last_written_pgd_val;
+	unsigned long last_written_pmd_val;
+	unsigned long last_written_pte_val;
 };
 
+
+int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next, 
+	      struct mm_walk *walk)
+{
+	unsigned long pgd_index = pgd_index(addr);
+	//unsigned long pgd_index = pgd - walk->mm->pgd;
+	struct walk_info *my_walk_info = (struct walk_info *)walk->private;
+	unsigned long current_pgd_base = my_walk_info->user_fake_pgd_base;
+	put_user(my_walk_info->last_written_pmd_val, 
+		  (pgd_t*)current_pgd_base + pgd_index);
+	my_walk_info->last_written_pmd_val += PAGE_SIZE;
+	return 0;
+}
+
+int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next, 
+	      struct mm_walk *walk)
+{	
+	unsigned long pmd_index = pmd_index(addr);
+	struct walk_info *my_walk_info = (struct walk_info *)walk->private;
+	
+	unsigned long current_pte_base = my_walk_info->last_written_pte_val;
+	struct vm_area_struct *user_vma = 
+		find_vma(current->mm, current_pte_base);
+	if (user_vma == NULL)
+		return -EINVAL;
+
+	/* TODO: Check how to use PROT_READ flag */
+	/* TODO: Think about behavior later*/
+	if (!remap_pfn_range(user_vma, current_pte_base, 
+		*pmd, PAGE_SIZE, PROT_READ))
+		return -EINVAL;
+	
+	unsigned long current_pmd_base = 
+		my_walk_info->last_written_pmd_val - PAGE_SIZE;
+	put_user(my_walk_info->last_written_pte_val, 
+		 (pmd_t*)current_pmd_base + pmd_index);
+	my_walk_info->last_written_pte_val += PAGE_SIZE;
+	return 0;
+}
 SYSCALL_DEFINE2(get_pagetable_layout, struct pagetable_layout_info __user *, 
-		pgtbl_info, int, size) {
+		pgtbl_info, int, size) 
+{
 	struct pagetable_layout_info layout_info;
 	if (size < sizeof(struct pagetable_layout_info))
 		return -EINVAL;
@@ -35,49 +74,30 @@ SYSCALL_DEFINE2(get_pagetable_layout, struct pagetable_layout_info __user *,
 
 SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		unsigned long, fake_pmds, unsigned long, page_table_addr, 
-		unsigned long, begin_vaddr, unsigned long, end_vaddr) {
+		unsigned long, begin_vaddr, unsigned long, end_vaddr) 
+{
 	struct mm_walk *walk;
 	struct walk_info my_walk_info;
 	struct task_struct *target_tsk;
 	struct vm_area_struct *user_vma;
-	unsigned long pgd_pfn = 0;
-	pgd_t *kernel_pgd_va_base;
 
 	//TODO: RCU lock
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	if (target_tsk == NULL)
 		return -EINVAL;
 
-	kernel_pgd_va_base = kmalloc(PAGE_SIZE, GFP_KERNEL);
-	if (!kernel_pgd_va_base)
-		return -ENOMEM;
-
-	user_vma = find_vma(current->mm, fake_pgd);
-	if (user_vma == NULL)
-		return -EINVAL;
-
-	if (!virt_addr_valid(kernel_pgd_va_base))
-		return -EINVAL;
-	pgd_pfn = (unsigned long) virt_to_phys(kernel_pgd_va_base);
-	/*
-	//TODO: check if this is the right way to translate PA;
-	pgd_pfn = page_to_pfn(pgd_page(kernel_pgd_va_base));
-	if (pgd_none(kernel_pgd_va_base) 
-	    || pgd_bad(kernel_pgd_va_base) 
-	    || !pfn_valid(pgd_pfn))
-		return -EINVAL;
-	*/
-	//TODO: check pgf_pfn validity
-	if (!remap_pfn_range(user_vma, fake_pgd, pgd_pfn, PAGE_SIZE, PROT_READ));
-		return -EINVAL;
-	
 	//prepare member functions of struct mm_walk *walk;
 	my_walk_info.user_fake_pmd_base = fake_pmds;
-	my_walk_info.kernel_pgd_va_base = kernel_pgd_va_base;
-	walk->private = (void *)&my_walk_info;
-	
+	my_walk_info.user_fake_pgd_base = fake_pgd;
+	my_walk_info.user_fake_pte_base = page_table_addr;
+	my_walk_info.last_written_pgd_val = fake_pgd;
+	my_walk_info.last_written_pmd_val = fake_pmds;
+	my_walk_info.last_written_pte_val = page_table_addr;
 
+	walk->private = &my_walk_info;
+	walk->pgd_entry = my_pgd_entry;
+	walk->pmd_entry = my_pmd_entry;
 
-
+	walk_page_range(begin_vaddr, end_vaddr, walk);	
 	return 0;
 }
