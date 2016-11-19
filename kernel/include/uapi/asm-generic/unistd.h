@@ -659,7 +659,13 @@ __SC_COMP(__NR_recvmmsg, sys_recvmmsg, compat_sys_recvmmsg)
  * Architectures may provide up to 16 syscalls of their own
  * starting with this value.
  */
-#define __NR_arch_specific_syscall 244
+
+#define __NR_get_pagetable_layout 244
+__SYSCALL(__NR_get_pagetable_layout, sys_get_pagetable_layout)
+
+#define __NR_expose_page_table 245
+__SYSCALL(__NR_expose_page_table, sys_expose_page_table)
+
 
 #define __NR_wait4 260
 __SC_COMP(__NR_wait4, sys_wait4, compat_sys_wait4)
