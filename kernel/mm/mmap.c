@@ -5,7 +5,7 @@
  *
  * Address space accounting code	<alan@lxorguk.ukuu.org.uk>
  */
-#include <asm/pgtable.h>
+
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/backing-dev.h>
@@ -121,26 +121,6 @@ unsigned long vm_memory_committed(void)
 }
 EXPORT_SYMBOL_GPL(vm_memory_committed);
 
-SYSCALL_DEFINE2(get_pagetable_layout, struct pagetable_layout_info __user *, 
-		pgtbl_info, int, size) {
-	struct pagetable_layout_info layout_info;
-	if (size < sizeof(struct pagetable_layout_info))
-		return -EINVAL;
-	layout_info.pgdir_shift = PGDIR_SHIFT;
-	layout_info.pmd_shift = PMD_SHIFT;
-	layout_info.page_shift = PAGE_SHIFT;
-	if (copy_to_user(pgtbl_info, &layout_info, size))
-		return -EFAULT;
-	
-	return 0;
-
-}
-
-SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
-		unsigned long, fake_pmds, unsigned long, page_table_addr, 
-		unsigned long, begin_vaddr, unsigned long, end_vaddr) {
-	return 0;
-}
 /*
  * Check that a process has enough memory to allocate a new virtual
  * mapping. 0 means there is enough memory for the allocation to
