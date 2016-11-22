@@ -1,4 +1,3 @@
-
 #include <linux/slab.h>
 #include <asm/pgtable.h>
 #include <linux/mm.h>
@@ -25,8 +24,13 @@ int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next,
 	//unsigned long pgd_index = pgd - walk->mm->pgd;
 	struct walk_info *my_walk_info = (struct walk_info *)walk->private;
 	unsigned long current_pgd_base = my_walk_info->user_fake_pgd_base;
-	put_user(my_walk_info->last_written_pmd_val, 
-		  (pgd_t*)current_pgd_base + pgd_index);
+	printk("Before put_user addr = %lu\n", addr);
+	if (put_user(my_walk_info->last_written_pmd_val, 
+		  (pgd_t*)current_pgd_base + pgd_index)) {
+		printk("put_user fail = %lu\n", addr);
+		return -EFAULT;
+	}
+	printk("After put_user addr = %lu\n", addr);
 	my_walk_info->last_written_pmd_val += PAGE_SIZE;
 	return 0;
 }
@@ -45,11 +49,14 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	
 	/* TODO: Check how to use PROT_READ flag */
 	/* TODO: Think about behavior later*/
-	
-	if (!remap_pfn_range(user_vma, current_pte_base, 
+
+	if (pmd == NULL)
+		return 0;
+		
+	if (remap_pfn_range(user_vma, current_pte_base, 
 		*pmd, PAGE_SIZE, PROT_READ))
 		return -EINVAL;
-	
+
 	unsigned long current_pmd_base = 
 		my_walk_info->last_written_pmd_val - PAGE_SIZE;
 	//TODO: figure out why put_user might fail!! is it failing because of
@@ -81,7 +88,7 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		unsigned long, fake_pmds, unsigned long, page_table_addr, 
 		unsigned long, begin_vaddr, unsigned long, end_vaddr) 
 {
-	struct mm_walk *walk;
+	struct mm_walk walk;
 	struct walk_info my_walk_info;
 	struct task_struct *target_tsk;
 	struct vm_area_struct *user_vma;
@@ -101,11 +108,18 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	my_walk_info.last_written_pmd_val = fake_pmds;
 	my_walk_info.last_written_pte_val = page_table_addr;
 
-	walk->private = &my_walk_info;
-	walk->pgd_entry = my_pgd_entry;
-	walk->pmd_entry = my_pmd_entry;
+	walk.mm = target_tsk->mm;
+	walk.private = &my_walk_info;
+	walk.pgd_entry = my_pgd_entry;
+	walk.pmd_entry = NULL;
+	walk.pte_entry = NULL;
+	walk.pud_entry = NULL;
+	walk.pte_hole = NULL;
+	walk.hugetlb_entry = NULL;
+	//walk->pgd_entry = my_pgd_entry;
+	//walk->pmd_entry = my_pmd_entry;
 
-	walk_page_range(begin_vaddr, end_vaddr, walk);
+	walk_page_range(begin_vaddr, end_vaddr, &walk);
 	if (pid != -1)
 		up_write(&target_tsk->mm->mmap_sem);
 	up_write(&current->mm->mmap_sem);
