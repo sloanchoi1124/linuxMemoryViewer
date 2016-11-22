@@ -42,18 +42,23 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 		find_vma(current->mm, current_pte_base);
 	if (user_vma == NULL)
 		return -EINVAL;
-
+	
 	/* TODO: Check how to use PROT_READ flag */
 	/* TODO: Think about behavior later*/
+	
 	if (!remap_pfn_range(user_vma, current_pte_base, 
 		*pmd, PAGE_SIZE, PROT_READ))
 		return -EINVAL;
 	
 	unsigned long current_pmd_base = 
 		my_walk_info->last_written_pmd_val - PAGE_SIZE;
+	//TODO: figure out why put_user might fail!! is it failing because of
+	//semaphore?
 	put_user(my_walk_info->last_written_pte_val, 
 		 (pmd_t*)current_pmd_base + pmd_index);
+		//return -EFAULT;
 	my_walk_info->last_written_pte_val += PAGE_SIZE;
+	
 	return 0;
 }
 SYSCALL_DEFINE2(get_pagetable_layout, struct pagetable_layout_info __user *, 
@@ -85,7 +90,9 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	if (target_tsk == NULL)
 		return -EINVAL;
-
+	down_write(&current->mm->mmap_sem);
+	if (pid != -1)
+		down_write(&target_tsk->mm->mmap_sem);
 	//prepare member functions of struct mm_walk *walk;
 	my_walk_info.user_fake_pmd_base = fake_pmds;
 	my_walk_info.user_fake_pgd_base = fake_pgd;
@@ -98,6 +105,9 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	walk->pgd_entry = my_pgd_entry;
 	walk->pmd_entry = my_pmd_entry;
 
-	walk_page_range(begin_vaddr, end_vaddr, walk);	
+	walk_page_range(begin_vaddr, end_vaddr, walk);
+	if (pid != -1)
+		up_write(&target_tsk->mm->mmap_sem);
+	up_write(&current->mm->mmap_sem);
 	return 0;
 }
