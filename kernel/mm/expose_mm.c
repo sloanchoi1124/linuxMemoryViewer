@@ -27,7 +27,6 @@ int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next,
 	printk("Before put_user addr = %lu\n", addr);
 	if (put_user(my_walk_info->last_written_pmd_val, 
 		  (pgd_t*)current_pgd_base + pgd_index)) {
-		printk("put_user fail = %lu\n", addr);
 		return -EFAULT;
 	}
 	printk("After put_user addr = %lu\n", addr);
@@ -47,23 +46,42 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	if (user_vma == NULL)
 		return -EINVAL;
 	
+	if (user_vma->vm_start != current_pte_base) {
+		printk("vma_start mismatch\n");
+		return -EFAULT;
+	}
 	/* TODO: Check how to use PROT_READ flag */
 	/* TODO: Think about behavior later*/
 
 	if (pmd == NULL)
 		return 0;
-		
-	if (remap_pfn_range(user_vma, current_pte_base, 
-		*pmd, PAGE_SIZE, PROT_READ))
+
+	unsigned long pfn = page_to_pfn(pmd_page(*pmd));
+	if (pmd_bad(*pmd) || !pfn_valid(pfn)) 
 		return -EINVAL;
+	
+	printk("Before remap_pfn_range %lu\n", addr);
+	int err = 0;
+	err = remap_pfn_range(user_vma, current_pte_base, 
+		pfn, PAGE_SIZE, user_vma->vm_page_prot);
+	if (err) {
+		printk("remap_pfn_range errno %d\n", err);
+		return -EINVAL;
+	}
+	//if (remap_pfn_range(user_vma, current_pte_base, 
+	//	pfn, PAGE_SIZE, user_vma->vm_page_prot)) 
+	//	return -EINVAL;
+	printk("After remap_pfn_range %lu\n", addr);
 
 	unsigned long current_pmd_base = 
 		my_walk_info->last_written_pmd_val - PAGE_SIZE;
 	//TODO: figure out why put_user might fail!! is it failing because of
 	//semaphore?
-	put_user(my_walk_info->last_written_pte_val, 
-		 (pmd_t*)current_pmd_base + pmd_index);
-		//return -EFAULT;
+	printk("Before put_user in pmd %lu\n", addr);
+	if (put_user(my_walk_info->last_written_pte_val, 
+		 (pmd_t*)current_pmd_base + pmd_index))
+		return -EFAULT;
+	printk("After put_user in pmd %lu\n", addr);
 	my_walk_info->last_written_pte_val += PAGE_SIZE;
 	
 	return 0;
@@ -111,7 +129,7 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	walk.mm = target_tsk->mm;
 	walk.private = &my_walk_info;
 	walk.pgd_entry = my_pgd_entry;
-	walk.pmd_entry = NULL;
+	walk.pmd_entry = my_pmd_entry;
 	walk.pte_entry = NULL;
 	walk.pud_entry = NULL;
 	walk.pte_hole = NULL;
