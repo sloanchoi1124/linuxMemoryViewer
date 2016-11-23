@@ -42,7 +42,7 @@ int main(int argc, char ** argv)
 	}
 	fake_pmd = (unsigned long)result;
 	
-	result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE | MAP_ANONYMOUS, -1, 0);
+	result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	if (result == MAP_FAILED) {
 		perror("3 mmap fail\n");
 		exit(1);

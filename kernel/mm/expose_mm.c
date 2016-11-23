@@ -43,11 +43,18 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	unsigned long current_pte_base = my_walk_info->last_written_pte_val;
 	struct vm_area_struct *user_vma = 
 		find_vma(current->mm, current_pte_base);
+	if (split_vma(current->mm, user_vma, current_pte_base + PAGE_SIZE, 0))
+		return -EFAULT;
+
 	if (user_vma == NULL)
 		return -EINVAL;
 	
-	if (user_vma->vm_start != current_pte_base) {
+	if (unlikely(user_vma->vm_start != current_pte_base)) {
 		printk("vma_start mismatch\n");
+		return -EFAULT;
+	}
+	if (unlikely(user_vma->vm_end != current_pte_base + PAGE_SIZE)) {
+		printk("vma_end mismatch\n");
 		return -EFAULT;
 	}
 	/* TODO: Check how to use PROT_READ flag */
@@ -57,6 +64,10 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 		return 0;
 
 	unsigned long pfn = page_to_pfn(pmd_page(*pmd));
+	unsigned long pfn_tmp = pmd_pfn(*pmd);
+	if (pfn_tmp == pfn)
+		printk("we have the same wrong pfn!\n");
+	//unsigned long pfn = pmd_val(*pmd)&PHYS_MASK >> PAGE_SHIFT;
 	if (pmd_bad(*pmd) || !pfn_valid(pfn)) 
 		return -EINVAL;
 	
