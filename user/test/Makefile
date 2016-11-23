@@ -1,5 +1,7 @@
-TARGET=test
-SOURCES=test.c
+
+
+TARGET=vm_inspector
+SOURCES=vm_inspector.c
 
 # You probably don't need to change below
 
