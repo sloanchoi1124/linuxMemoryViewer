@@ -46,14 +46,14 @@ int main(int argc, char ** argv)
 	unsigned long fake_pmd_base;
 	unsigned long page_table_addr;
 
-	void *result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE| MAP_ANONYMOUS, -1, 0);
+	void *result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (result == MAP_FAILED) {
 		perror("1 mmap fail\n");
 		exit(1);
 	}
 	fake_pgd_base = (unsigned long)result;
 
-	result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_POPULATE | MAP_ANONYMOUS, -1, 0);
+	result = mmap(NULL, pgd_len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 	if (result == MAP_FAILED) {
 		perror("2 mmap fail\n");
 		exit(1);
@@ -122,7 +122,7 @@ int main(int argc, char ** argv)
 		
 		cur_pa_base = (table_entry & phys_mask) >> PAGE_SHIFT;
 		cur_pa = cur_pa_base + pa_offset(current_va);
-		printf("%lx\t%lx\n", current_va, cur_pa);
+		printf("%lx\t%lx\n", current_va, cur_pa << PAGE_SHIFT);
 		current_va += 4096;
 	}
 	return 0;

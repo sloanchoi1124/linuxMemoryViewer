@@ -8,8 +8,9 @@
 #include <asm/uaccess.h>
 
 struct walk_info {
-	unsigned long kernel_fake_pgd_base;
-	unsigned long kernel_fake_cur_pmd_base;
+	pgd_t *kernel_fake_pgd_base;
+	int pmd_counter;
+	pmd_t *pmd_buf[512];
 	unsigned long user_fake_pte_base;
 	unsigned long last_written_pgd_val;
 	unsigned long last_written_pmd_val;
@@ -21,24 +22,24 @@ int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next,
 	      struct mm_walk *walk)
 {
 	unsigned long pgd_index = pgd_index(addr);
-	//unsigned long pgd_index = pgd - walk->mm->pgd;
 	struct walk_info *my_walk_info = (struct walk_info *)walk->private;
-	//unsigned long current_pgd_base = my_walk_info->user_fake_pgd_base;
-	unsigned long current_kernel_pgd_base =
+	pgd_t *current_kernel_pgd_base =
 		my_walk_info->kernel_fake_pgd_base;
 
 	printk("Before kernel pgd buffer addr = %lu\n", addr);
-	/*
-	if (put_user(my_walk_info->last_written_pmd_val, 
-		  (pgd_t*)current_pgd_base + pgd_index)) {
-		return -EFAULT;
-	} */
 	
-	*((pgd_t *)currnet_kernel_pgd_base + pgd_index) 
-		= my_walk_info->last_written_pmd_val
+	*(current_kernel_pgd_base + pgd_index) =
+		my_walk_info->last_written_pmd_val;
 	printk("After kernel pgd buffer addr = %lu\n", addr);
 	my_walk_info->last_written_pmd_val += PAGE_SIZE;
-	my_walk_info->kernel_fake_cur_pmd_base += PAGE_SIZE;
+	pmd_t* new_pmd;
+	new_pmd = (pmd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
+	if (new_pmd == NULL) 
+		return -ENOMEM;
+	int cnt;
+	cnt = my_walk_info->pmd_counter;
+	my_walk_info->pmd_buf[cnt] = new_pmd;
+	my_walk_info->pmd_counter++;
 	return 0;
 }
 
@@ -72,10 +73,6 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 		return 0;
 
 	unsigned long pfn = page_to_pfn(pmd_page(*pmd));
-	unsigned long pfn_tmp = pmd_pfn(*pmd);
-	if (pfn_tmp == pfn)
-		printk("we have the same wrong pfn!\n");
-	//unsigned long pfn = pmd_val(*pmd)&PHYS_MASK >> PAGE_SHIFT;
 	if (pmd_bad(*pmd) || !pfn_valid(pfn)) 
 		return -EINVAL;
 	
@@ -87,25 +84,12 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 		printk("remap_pfn_range errno %d\n", err);
 		return -EINVAL;
 	}
-	//if (remap_pfn_range(user_vma, current_pte_base, 
-	//	pfn, PAGE_SIZE, user_vma->vm_page_prot)) 
-	//	return -EINVAL;
 	printk("After remap_pfn_range %lu\n", addr);
 
-	//unsigned long current_pmd_base = 
-	//my_walk_info->last_written_pmd_val - PAGE_SIZE;
-	unsigned long current_kernel_pmd_base =
-		my_walk_info->kernel_fake_cur_pmd_base - PAGE_SIZE;
-	//TODO: figure out why put_user might fail!! is it failing because of
-	//semaphore?
 	printk("Before kernel pmd buffer in %lu\n", addr);
-	*((pmd_t *) current_kernel_pmd_base + pmd_index) =
+	int pmd_counter = my_walk_info->pmd_counter - 1;
+	*(my_walk_info->pmd_buf[pmd_counter] + pmd_index) =
 		my_walk_info->last_written_pte_val;
-	/*
-	if (put_user(my_walk_info->last_written_pte_val, 
-		 (pmd_t*)current_pmd_base + pmd_index))
-		return -EFAULT;
-	*/
 	printk("After kernel pmd buffer in %lu\n", addr);
 	my_walk_info->last_written_pte_val += PAGE_SIZE;
 	return 0;
@@ -134,48 +118,19 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	struct walk_info my_walk_info;
 	struct task_struct *target_tsk;
 	struct vm_area_struct *user_vma;
-	unsigned long kernel_pgd_base;
-	unsigned long kernel_pmd_base;
-	//unsigned long kernel_pte_base;
+	pgd_t * kernel_pgd_base;
 	
-	void * result;
-	result = vm_mmap_pgoff(NULL, NULL, pdg_len, PROT_READ | PROT_WRITE, 
-			       MAP_PRIVATE | MAP_ANONYMOUS, 0);
-	if (result == MAP_FAILED) {
-		return -ENOMEM;
-	}
-	kernel_pgd_base = (unsigned long) result;
-
-	result = vm_mmap_pgoff(NULL, NULL, pgd_len, PROT_READ | PROT_WRITE,
-			       MAP_PRIVATE | NAP_ANONYMOUS, 0);
-	if (result == MAP_FAILED) {
-		return -ENOMEM;
-	}
-	kernel_pmd_base = (unsigned long) result;
-
-	/*
-	result = vm_mmap_pgoff(NULL, NULL, pgd_len, PORT_READ | PROT_WRITE,
-			       MAP_PRIVATE | MAP_ANONYMOUS, 0);
-	if (result == MAP_FAILED) {
-		return -ENOMEM;
-	}
-	kernel_pte_base =  (unsigned long) result;
-	*/
+	kernel_pgd_base = (pgd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
 	
-	//TODO: RCU lock
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	if (target_tsk == NULL)
 		return -EINVAL;
 	down_write(&current->mm->mmap_sem);
 	if (pid != -1)
 		down_write(&target_tsk->mm->mmap_sem);
-	//prepare member functions of struct mm_walk *walk;
-	//my_walk_info.user_fake_pmd_base = fake_pmds;
-	//my_walk_info.user_fake_pgd_base = fake_pgd;
-	//my_walk_info.user_fake_pte_base = page_table_addr;
+	my_walk_info.user_fake_pte_base = page_table_addr;
 	my_walk_info.kernel_fake_pgd_base = kernel_pgd_base;
-	my_walk_info.kernel_fake__cur_pmd_base = kernel_pmd_base;
-	//my_walk_info.kernel_fake_pte_base = kernel_pte_base;
+	my_walk_info.pmd_counter = 0;
 	my_walk_info.last_written_pgd_val = fake_pgd;
 	my_walk_info.last_written_pmd_val = fake_pmds;
 	my_walk_info.last_written_pte_val = page_table_addr;
@@ -197,9 +152,22 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	copy_to_user((unsigned long *) fake_pgd, (unsigned long *)
 		     kernel_pgd_base, PAGE_SIZE);
 
-	copy_to_user((unsigned long *) fake_pmds, (unsigned long *)
-		     kernel_pmd_base, my_walk_info.kernel_fake_cur_pmd_base -
-		     kernel_pmd_base);
-	
+	int i; 
+	for (i = 0; i < my_walk_info.pmd_counter; i++) {
+		unsigned long result;
+		pmd_t * source;
+		unsigned long * dest;
+		source = my_walk_info.pmd_buf[i];
+		dest = fake_pmds + i * PAGE_SIZE;
+		result = copy_to_user(dest, source, PAGE_SIZE);
+		if (result) 
+			break;
+	}
+
+	for (i = 0; i < my_walk_info.pmd_counter; i++) {
+		kfree(my_walk_info.pmd_buf[i]);
+	}
+
+	kfree(kernel_pgd_base);
 	return 0;
 }
