@@ -14,13 +14,27 @@
 #define PTRS_PER_PMD	512
 #define PTRS_PER_PTE	512
 #define PAGE_SIZE	4096
-
+#define PTE_VALID	1UL << 0
+#define PTE_PROC_NONE	1UL << 1
+#define PTE_DIRTY	1UL << 55
+#define PTE_RDONLY	1UL << 7
+#define PTE_AF		1UL << 10
+#define PTE_UXN		1UL << 54
+#define PTE_FILE	1UL << 2
+#define pte_present(pte)	(!!(pte & (PTE_VALID | PTE_PROC_NONE)))
+#define pte_young(pte)		(!!(pte & (PTE_AF)))
+#define pte_file(pte)		(!!(pte & (PTE_FILE)))
+#define pte_dirty(pte)		(!!(pte & (PTE_DIRTY)))
+#define pte_read_only(pte)	(!!(pte & (PTE_RDONLY)))
+#define pte_uxn(pte)		(!!(pte & (PTE_UXN)))
 
 unsigned long get_phys()
 {
 	unsigned long tmp = 1;
 	return (tmp << 40) - 1;
 }
+
+
 int pgd_index(unsigned long addr) 
 {
 	return (((addr) >> PGDIR_SHIFT) & (PTRS_PER_PGD - 1));
@@ -76,7 +90,7 @@ int main(int argc, char ** argv)
 	if (argc == 5) {
 		pid = strtol(argv[2], NULL, 10);
 		if (strncmp("-v", argv[1], 2) != 0) {
-			printf("Usage: ./vm_inspector -v pid va_begin va_end");
+			printf("Usage: ./vm_inspector -v pid va_begin va_end\n");
 			exit(1);
 		}
 		verbose = 1;
@@ -96,6 +110,16 @@ int main(int argc, char ** argv)
 		printf("invalid begin_vaddr and end_vaddr\n");
 		exit(1);
 	}
+
+	void* temp;
+	temp = malloc(4096*10);
+	if (temp==NULL) 
+		exit(1);
+	*((unsigned long *)temp) = 100;
+
+	//change here
+	begin_vaddr = (unsigned long)temp;
+	end_vaddr = begin_vaddr + 4096 * 10;
 	if (syscall(245, pid, fake_pgd_base, fake_pmd_base, page_table_addr, begin_vaddr, end_vaddr)) {
 		perror("syscall 245 failed!\n");
 		exit(1);
@@ -112,31 +136,81 @@ int main(int argc, char ** argv)
 	current_va = begin_vaddr;
 	unsigned long phys_mask;
 	phys_mask = get_phys();
+
 	while(current_va <= end_vaddr) {
 		cur_pgd_index = pgd_index(current_va);
 		cur_fake_pmd = *((unsigned long *)(fake_pgd_base + cur_pgd_index * ENTRY_SIZE));
-		if (cur_fake_pmd == 0) {
-			current_va += 4096;
-			continue;
-		}
+		if (cur_fake_pmd == 0)
+			goto next_va;
+	
 		cur_pmd_index = pmd_index(current_va);
 		cur_fake_pte = *((unsigned long *)(cur_fake_pmd + cur_pmd_index * ENTRY_SIZE));
-		if (cur_fake_pte == 0) {
-			current_va += 4096;
-			continue;
-		}
+		if (cur_fake_pte == 0)
+			goto next_va;
+
 		cur_pte_index = pte_index(current_va);
 		table_entry = *((unsigned long *)(cur_fake_pte + cur_pte_index * ENTRY_SIZE));
 		
 		//todo
-		if (table_entry == 0) {
-			current_va += 4096;
-			continue;
-		}
+		if (table_entry == 0)
+			goto next_va;
+
+		if (pte_present(table_entry) == 0) 
+			goto next_va;
 			
 		cur_pa_base = (table_entry & phys_mask) >> PAGE_SHIFT;
-		cur_pa = cur_pa_base + pa_offset(current_va);
-		printf("%lx\t%lx\n", current_va, cur_pa << PAGE_SHIFT);
+		cur_pa = (cur_pa_base << PAGE_SHIFT) + pa_offset(current_va);
+		printf("0x%lx\t0x%lx\t%d\t%d\t%d\t%d\t%d\n", current_va, cur_pa,
+		       pte_young(table_entry), pte_file(table_entry),
+		       pte_dirty(table_entry), pte_read_only(table_entry),
+		       pte_uxn(table_entry));
+		current_va += 4096;
+		continue;
+next_va:	
+		if (verbose)
+			printf("0x%lx\t0x%lx\t%d\t%d\t%d\t%d\t%d\n", current_va, 
+			       cur_pa, 0, 0, 0, 0, 0);
+		current_va += 4096;
+	}
+
+	//free(temp);
+	printf("NOTHING SHOULD BE PRINTED AFTER THIS\n");
+
+	*((unsigned long *)(temp + 4096*5)) = 105;
+        current_va = begin_vaddr;
+	while(current_va <= end_vaddr) {
+		cur_pgd_index = pgd_index(current_va);
+		cur_fake_pmd = *((unsigned long *)(fake_pgd_base + cur_pgd_index * ENTRY_SIZE));
+		if (cur_fake_pmd == 0)
+			goto next_va2;
+	
+		cur_pmd_index = pmd_index(current_va);
+		cur_fake_pte = *((unsigned long *)(cur_fake_pmd + cur_pmd_index * ENTRY_SIZE));
+		if (cur_fake_pte == 0)
+			goto next_va2;
+
+		cur_pte_index = pte_index(current_va);
+		table_entry = *((unsigned long *)(cur_fake_pte + cur_pte_index * ENTRY_SIZE));
+		
+		//todo
+		if (table_entry == 0)
+			goto next_va2;
+
+		if (pte_present(table_entry) == 0) 
+			goto next_va2;
+			
+		cur_pa_base = (table_entry & phys_mask) >> PAGE_SHIFT;
+		cur_pa = (cur_pa_base << PAGE_SHIFT) + pa_offset(current_va);
+		printf("0x%lx\t0x%lx\t%d\t%d\t%d\t%d\t%d\n", current_va, cur_pa,
+		       pte_young(table_entry), pte_file(table_entry),
+		       pte_dirty(table_entry), pte_read_only(table_entry),
+		       pte_uxn(table_entry));
+		current_va += 4096;
+		continue;
+next_va2:	
+		if (verbose)
+			printf("0x%lx\t0x%lx\t%d\t%d\t%d\t%d\t%d\n", current_va, 
+			       cur_pa, 0, 0, 0, 0, 0);
 		current_va += 4096;
 	}
 	return 0;
