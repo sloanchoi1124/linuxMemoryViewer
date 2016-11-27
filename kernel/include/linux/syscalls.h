@@ -78,7 +78,7 @@ struct sigaltstack;
 #include <linux/quota.h>
 #include <linux/key.h>
 #include <trace/syscall.h>
-
+#include <linux/expose_mm.h>
 /*
  * __MAP - apply a macro to syscall arguments
  * __MAP(n, m, t1, a1, t2, a2, ..., tn, an) will expand to
@@ -856,4 +856,12 @@ asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
 asmlinkage long sys_seccomp(unsigned int op, unsigned int flags,
 			    const char __user *uargs);
+
+asmlinkage long sys_get_pagetable_layout(
+		struct pagetable_layout_info __user * pgtble_info,
+		int size);
+
+asmlinkage long sys_expose_page_table(pid_t pid, unsigned long fake_pgd, 
+		unsigned long fake_pmds, unsigned long page_table_addr,
+		unsigned long begin_vaddr, unsigned long end_vaddr);
 #endif

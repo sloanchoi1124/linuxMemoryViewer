@@ -2366,7 +2366,6 @@ int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
 	unsigned long end = addr + PAGE_ALIGN(size);
 	struct mm_struct *mm = vma->vm_mm;
 	int err;
-
 	/*
 	 * Physically remapped pages are special. Tell the
 	 * rest of the world about it:
@@ -2385,33 +2384,41 @@ int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
 	 * un-COW'ed pages by matching them up with "vma->vm_pgoff".
 	 * See vm_normal_page() for details.
 	 */
+	printk("Start remap_pfn_range %lu\n", addr);
 	if (is_cow_mapping(vma->vm_flags)) {
-		if (addr != vma->vm_start || end != vma->vm_end)
+		if (addr != vma->vm_start || end != vma->vm_end) {
+			printk("Print is_cow... info\n");
+			printk("%lu\n", addr);
+			printk("%lu\n", vma->vm_start);
+			printk("%lu\n", end);
+			printk("%lu\n", vma->vm_end);
 			return -EINVAL;
+		}
 		vma->vm_pgoff = pfn;
 	}
-
+	printk("Pass is_cow_mapping %lu\n", addr);
 	err = track_pfn_remap(vma, &prot, pfn, addr, PAGE_ALIGN(size));
 	if (err)
 		return -EINVAL;
-
 	vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
-
+	printk("Pass track_pfn_remap %lu\n", addr);
 	BUG_ON(addr >= end);
 	pfn -= addr >> PAGE_SHIFT;
 	pgd = pgd_offset(mm, addr);
 	flush_cache_range(vma, addr, end);
 	do {
+		printk("Enter do_while with err %d, %lu\n", err, addr);
 		next = pgd_addr_end(addr, end);
 		err = remap_pud_range(mm, pgd, addr, next,
 				pfn + (addr >> PAGE_SHIFT), prot);
-		if (err)
+		if (err) 
 			break;
 	} while (pgd++, addr = next, addr != end);
+	
 
 	if (err)
 		untrack_pfn(vma, pfn, PAGE_ALIGN(size));
-
+	printk("Before return err %d, %lu\n", err, addr);
 	return err;
 }
 EXPORT_SYMBOL(remap_pfn_range);
