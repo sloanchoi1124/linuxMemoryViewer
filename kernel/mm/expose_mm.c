@@ -80,6 +80,9 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	int err = 0;
 	err = remap_pfn_range(user_vma, current_pte_base, 
 		pfn, PAGE_SIZE, user_vma->vm_page_prot);
+	printk("###################### %lu\n", PROT_READ);
+	printk("###################### %lu\n", user_vma->vm_page_prot);
+	printk("###################### %lu\n", user_vma->vm_flags);
 	if (err) {
 		printk("remap_pfn_range errno %d\n", err);
 		return -EINVAL;
@@ -94,6 +97,7 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	my_walk_info->last_written_pte_val += PAGE_SIZE;
 	return 0;
 }
+
 SYSCALL_DEFINE2(get_pagetable_layout, struct pagetable_layout_info __user *, 
 		pgtbl_info, int, size) 
 {
@@ -120,14 +124,51 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	struct vm_area_struct *user_vma;
 	pgd_t * kernel_pgd_base;
 	
-	kernel_pgd_base = (pgd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
-	
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	if (target_tsk == NULL)
 		return -EINVAL;
 	down_write(&current->mm->mmap_sem);
 	if (pid != -1)
 		down_write(&target_tsk->mm->mmap_sem);
+	
+	struct vm_area_struct *pgd_vma;
+	pgd_vma = find_vma(current->mm, fake_pgd);
+	if (pgd_vma == NULL)
+		return -EINVAL;
+	if (pgd_vma->vm_start < fake_pgd) {
+		if (split_vma(current->mm, pgd_vma, fake_pgd, 1))
+			return -EFAULT;
+	}
+
+	struct vm_area_struct *pmd_vma;
+	pmd_vma = find_vma(current->mm, fake_pmds);
+	if (pmd_vma == NULL)
+		return -EINVAL;
+	if (pmd_vma->vm_start < fake_pmds) {
+		if (split_vma(current->mm, pmd_vma, fake_pmds, 1))
+			return -EFAULT;
+	}
+
+	struct vm_area_struct *pte_vma;
+	pte_vma = find_vma(current->mm, page_table_addr);
+	if (pte_vma == NULL)
+		return -EINVAL;
+	if (pte_vma->vm_start < page_table_addr) {
+		if (split_vma(current->mm, pte_vma, page_table_addr, 1))
+			return -EFAULT;
+	}
+	printk("####### %lu\n", PROT_READ);
+	printk("####### %lu\n", pte_vma->vm_page_prot);
+	printk("####### %lu\n", pte_vma->vm_flags);
+	pte_vma->vm_flags &= ~VM_WRITE;
+	pte_vma->vm_page_prot = vm_get_page_prot(pte_vma->vm_flags);
+	printk("############# %lu\n", PROT_READ);
+	printk("############# %lu\n", pte_vma->vm_page_prot);
+	printk("############# %lu\n", pte_vma->vm_flags);
+
+
+	kernel_pgd_base = (pgd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
+
 	my_walk_info.user_fake_pte_base = page_table_addr;
 	my_walk_info.kernel_fake_pgd_base = kernel_pgd_base;
 	my_walk_info.pmd_counter = 0;
