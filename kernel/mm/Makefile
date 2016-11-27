@@ -17,7 +17,7 @@ obj-y			:= filemap.o mempool.o oom_kill.o fadvise.o \
 			   util.o mmzone.o vmstat.o backing-dev.o \
 			   mm_init.o mmu_context.o percpu.o slab_common.o \
 			   compaction.o balloon_compaction.o \
-			   showmem.o vmpressure.o
+			   showmem.o vmpressure.o \
 			   interval_tree.o expose_mm.o $(mmu-y)\
 
 

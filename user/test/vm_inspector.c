@@ -115,11 +115,25 @@ int main(int argc, char ** argv)
 	while(current_va <= end_vaddr) {
 		cur_pgd_index = pgd_index(current_va);
 		cur_fake_pmd = *((unsigned long *)(fake_pgd_base + cur_pgd_index * ENTRY_SIZE));
+		if (cur_fake_pmd == 0) {
+			current_va += 4096;
+			continue;
+		}
 		cur_pmd_index = pmd_index(current_va);
 		cur_fake_pte = *((unsigned long *)(cur_fake_pmd + cur_pmd_index * ENTRY_SIZE));
+		if (cur_fake_pte == 0) {
+			current_va += 4096;
+			continue;
+		}
 		cur_pte_index = pte_index(current_va);
 		table_entry = *((unsigned long *)(cur_fake_pte + cur_pte_index * ENTRY_SIZE));
 		
+		//todo
+		if (table_entry == 0) {
+			current_va += 4096;
+			continue;
+		}
+			
 		cur_pa_base = (table_entry & phys_mask) >> PAGE_SHIFT;
 		cur_pa = cur_pa_base + pa_offset(current_va);
 		printf("%lx\t%lx\n", current_va, cur_pa << PAGE_SHIFT);

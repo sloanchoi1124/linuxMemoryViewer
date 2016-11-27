@@ -23,6 +23,8 @@ int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next,
 {
 	unsigned long pgd_index = pgd_index(addr);
 	struct walk_info *my_walk_info = (struct walk_info *)walk->private;
+	pmd_t* new_pmd;
+	int cnt;
 	pgd_t *current_kernel_pgd_base =
 		my_walk_info->kernel_fake_pgd_base;
 
@@ -32,11 +34,9 @@ int my_pgd_entry(pgd_t *pgd, unsigned long addr, unsigned long next,
 		my_walk_info->last_written_pmd_val;
 	printk("After kernel pgd buffer addr = %lu\n", addr);
 	my_walk_info->last_written_pmd_val += PAGE_SIZE;
-	pmd_t* new_pmd;
-	new_pmd = (pmd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
+	new_pmd = (pmd_t *) kcalloc(1, PAGE_SIZE, GFP_KERNEL);
 	if (new_pmd == NULL) 
 		return -ENOMEM;
-	int cnt;
 	cnt = my_walk_info->pmd_counter;
 	my_walk_info->pmd_buf[cnt] = new_pmd;
 	my_walk_info->pmd_counter++;
@@ -52,6 +52,10 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	unsigned long current_pte_base = my_walk_info->last_written_pte_val;
 	struct vm_area_struct *user_vma = 
 		find_vma(current->mm, current_pte_base);
+
+	unsigned long pfn;
+	int err;
+	int pmd_counter;
 	if (split_vma(current->mm, user_vma, current_pte_base + PAGE_SIZE, 0))
 		return -EFAULT;
 
@@ -72,17 +76,17 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	if (pmd == NULL)
 		return 0;
 
-	unsigned long pfn = page_to_pfn(pmd_page(*pmd));
+	pfn = page_to_pfn(pmd_page(*pmd));
 	if (pmd_bad(*pmd) || !pfn_valid(pfn)) 
 		return -EINVAL;
 	
 	printk("Before remap_pfn_range %lu\n", addr);
-	int err = 0;
+	err = 0;
 	err = remap_pfn_range(user_vma, current_pte_base, 
 		pfn, PAGE_SIZE, user_vma->vm_page_prot);
-	printk("###################### %lu\n", PROT_READ);
-	printk("###################### %lu\n", user_vma->vm_page_prot);
-	printk("###################### %lu\n", user_vma->vm_flags);
+	printk("###################### %d\n", PROT_READ);
+	printk("###################### %lu\n", (unsigned long) user_vma->vm_page_prot);
+	printk("###################### %lu\n", (unsigned long) user_vma->vm_flags);
 	if (err) {
 		printk("remap_pfn_range errno %d\n", err);
 		return -EINVAL;
@@ -90,7 +94,7 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	printk("After remap_pfn_range %lu\n", addr);
 
 	printk("Before kernel pmd buffer in %lu\n", addr);
-	int pmd_counter = my_walk_info->pmd_counter - 1;
+	pmd_counter = my_walk_info->pmd_counter - 1;
 	*(my_walk_info->pmd_buf[pmd_counter] + pmd_index) =
 		my_walk_info->last_written_pte_val;
 	printk("After kernel pmd buffer in %lu\n", addr);
@@ -119,10 +123,14 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		unsigned long, begin_vaddr, unsigned long, end_vaddr) 
 {
 	struct mm_walk walk;
-	struct walk_info my_walk_info;
+	struct walk_info *my_walk_info;
 	struct task_struct *target_tsk;
-	struct vm_area_struct *user_vma;
 	pgd_t * kernel_pgd_base;
+	struct vm_area_struct *pgd_vma;
+	struct vm_area_struct *pmd_vma;
+	struct vm_area_struct *pte_vma;
+	
+	int i; 
 	
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	if (target_tsk == NULL)
@@ -131,7 +139,6 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	if (pid != -1)
 		down_write(&target_tsk->mm->mmap_sem);
 	
-	struct vm_area_struct *pgd_vma;
 	pgd_vma = find_vma(current->mm, fake_pgd);
 	if (pgd_vma == NULL)
 		return -EINVAL;
@@ -140,7 +147,6 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 			return -EFAULT;
 	}
 
-	struct vm_area_struct *pmd_vma;
 	pmd_vma = find_vma(current->mm, fake_pmds);
 	if (pmd_vma == NULL)
 		return -EINVAL;
@@ -149,7 +155,6 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 			return -EFAULT;
 	}
 
-	struct vm_area_struct *pte_vma;
 	pte_vma = find_vma(current->mm, page_table_addr);
 	if (pte_vma == NULL)
 		return -EINVAL;
@@ -157,27 +162,29 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		if (split_vma(current->mm, pte_vma, page_table_addr, 1))
 			return -EFAULT;
 	}
-	printk("####### %lu\n", PROT_READ);
-	printk("####### %lu\n", pte_vma->vm_page_prot);
+	printk("####### %d\n", PROT_READ);
+	printk("####### %lu\n", (unsigned long) pte_vma->vm_page_prot);
 	printk("####### %lu\n", pte_vma->vm_flags);
 	pte_vma->vm_flags &= ~VM_WRITE;
 	pte_vma->vm_page_prot = vm_get_page_prot(pte_vma->vm_flags);
-	printk("############# %lu\n", PROT_READ);
-	printk("############# %lu\n", pte_vma->vm_page_prot);
-	printk("############# %lu\n", pte_vma->vm_flags);
+	printk("############# %d\n", PROT_READ);
+	printk("############# %lu\n", (unsigned long) pte_vma->vm_page_prot);
+	printk("############# %lu\n", (unsigned long) pte_vma->vm_flags);
 
 
-	kernel_pgd_base = (pgd_t *) kmalloc(PAGE_SIZE, GFP_KERNEL);
-
-	my_walk_info.user_fake_pte_base = page_table_addr;
-	my_walk_info.kernel_fake_pgd_base = kernel_pgd_base;
-	my_walk_info.pmd_counter = 0;
-	my_walk_info.last_written_pgd_val = fake_pgd;
-	my_walk_info.last_written_pmd_val = fake_pmds;
-	my_walk_info.last_written_pte_val = page_table_addr;
+	kernel_pgd_base = (pgd_t *) kcalloc(1, PAGE_SIZE, GFP_KERNEL);
+	my_walk_info = kcalloc(1, sizeof(struct walk_info), GFP_KERNEL);
+	if (my_walk_info == NULL) 
+		return -ENOMEM;
+	my_walk_info->user_fake_pte_base = page_table_addr;
+	my_walk_info->kernel_fake_pgd_base = kernel_pgd_base;
+	my_walk_info->pmd_counter = 0;
+	my_walk_info->last_written_pgd_val = fake_pgd;
+	my_walk_info->last_written_pmd_val = fake_pmds;
+	my_walk_info->last_written_pte_val = page_table_addr;
 
 	walk.mm = target_tsk->mm;
-	walk.private = &my_walk_info;
+	walk.private = my_walk_info;
 	walk.pgd_entry = my_pgd_entry;
 	walk.pmd_entry = my_pmd_entry;
 	walk.pte_entry = NULL;
@@ -190,25 +197,26 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		up_write(&target_tsk->mm->mmap_sem);
 	up_write(&current->mm->mmap_sem);
 	
-	copy_to_user((unsigned long *) fake_pgd, (unsigned long *)
-		     kernel_pgd_base, PAGE_SIZE);
+	if (copy_to_user((unsigned long *) fake_pgd, (unsigned long *)
+		     kernel_pgd_base, PAGE_SIZE)) 
+		return -EFAULT;
 
-	int i; 
-	for (i = 0; i < my_walk_info.pmd_counter; i++) {
+	for (i = 0; i < my_walk_info->pmd_counter; i++) {
 		unsigned long result;
 		pmd_t * source;
 		unsigned long * dest;
-		source = my_walk_info.pmd_buf[i];
-		dest = fake_pmds + i * PAGE_SIZE;
+		source = my_walk_info->pmd_buf[i];
+		dest = (unsigned long *) (fake_pmds + i * PAGE_SIZE);
 		result = copy_to_user(dest, source, PAGE_SIZE);
 		if (result) 
 			break;
 	}
 
-	for (i = 0; i < my_walk_info.pmd_counter; i++) {
-		kfree(my_walk_info.pmd_buf[i]);
+	for (i = 0; i < my_walk_info->pmd_counter; i++) {
+		kfree(my_walk_info->pmd_buf[i]);
 	}
 
 	kfree(kernel_pgd_base);
+	kfree(my_walk_info);
 	return 0;
 }
