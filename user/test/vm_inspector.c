@@ -208,7 +208,4 @@ free_pgd:
 	munmap((void *)fake_pgd_base, pgd_len);
 rt:
 	exit(err);
-
-
-
 }
