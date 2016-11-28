@@ -6,7 +6,6 @@
 #include <asm/page.h>
 #include <asm/memory.h>
 #include <linux/uaccess.h>
-//TODO: change it back to asm if it doesn't work
 struct walk_info {
 	pgd_t *kernel_fake_pgd_base;
 	int pmd_counter;

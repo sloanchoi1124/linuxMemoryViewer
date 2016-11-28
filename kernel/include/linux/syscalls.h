@@ -861,7 +861,7 @@ asmlinkage long sys_get_pagetable_layout(
 		struct pagetable_layout_info __user * pgtble_info,
 		int size);
 
-asmlinkage long sys_expose_page_table(pid_t pid, unsigned long fake_pgd, 
+asmlinkage long sys_expose_page_table(pid_t pid, unsigned long fake_pgd,
 		unsigned long fake_pmds, unsigned long page_table_addr,
 		unsigned long begin_vaddr, unsigned long end_vaddr);
 #endif
