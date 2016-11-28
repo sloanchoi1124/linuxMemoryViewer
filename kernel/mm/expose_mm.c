@@ -235,7 +235,7 @@ free_kpgd_buffer:
 	kfree(kernel_pgd_base);
 
 free_walk_info:
-	kfree(&my_walk_info);
+	kfree(my_walk_info);
 
 	return err;
 
