@@ -66,7 +66,6 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	if (unlikely(user_vma->vm_end != current_pte_base + PAGE_SIZE)) {
 		return -EFAULT;
 	}
-	/* TODO: Think about behavior later*/
 
 	if (pmd == NULL)
 		return 0;
@@ -78,10 +77,8 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	err = 0;
 	err = remap_pfn_range(user_vma, current_pte_base, 
 		pfn, PAGE_SIZE, user_vma->vm_page_prot);
-	if (err) {
-		printk("remap_pfn_range errno %d\n", err);
-		return -EINVAL;
-	}
+	if (err)
+		return err;
 	pmd_counter = my_walk_info->pmd_counter - 1;
 	*(my_walk_info->pmd_buf[pmd_counter] + pmd_index) =
 		my_walk_info->last_written_pte_val;
@@ -123,12 +120,21 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 
 	if (begin_vaddr >= end_vaddr)
 		return -EINVAL;
-	/*check if pid is valid*/
 	rcu_read_lock();
 	target_tsk = pid == -1 ? current : find_task_by_vpid(pid);
 	rcu_read_unlock();
 	if (target_tsk == NULL)
 		return -EINVAL;
+	my_walk_info = kcalloc(1, sizeof(struct walk_info), GFP_KERNEL);
+	if (my_walk_info == NULL)
+		return -ENOMEM;
+
+	kernel_pgd_base = (pgd_t *) kcalloc(1, PAGE_SIZE, GFP_KERNEL);
+	if (kernel_pgd_base == NULL) {
+		err = -ENOMEM;
+		goto free_walk_info;
+	}
+
 
 	/*hold semaphore for walking page table & remaping*/
 	down_write(&current->mm->mmap_sem);
@@ -169,16 +175,9 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 			goto sem_release;
 		}
 	}
-
+	
 	pte_vma->vm_flags &= ~VM_WRITE;
 	pte_vma->vm_page_prot = vm_get_page_prot(pte_vma->vm_flags);
-
-	kernel_pgd_base = (pgd_t *) kcalloc(1, PAGE_SIZE, GFP_KERNEL);
-	my_walk_info = kcalloc(1, sizeof(struct walk_info), GFP_KERNEL);
-	if (my_walk_info == NULL){
-		err = -ENOMEM;
-		goto sem_release;
-	}
 
 	my_walk_info->user_fake_pte_base = page_table_addr;
 	my_walk_info->kernel_fake_pgd_base = kernel_pgd_base;
@@ -197,18 +196,19 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 	walk.hugetlb_entry = NULL;
 
 	err = walk_page_range(begin_vaddr, end_vaddr, &walk);
-	if (err)
-		goto free_kbuffer;
-
-	if (pid != -1)
+	/*Release semaphore after walking page table*/
+	if (pid != 1)
 		up_write(&target_tsk->mm->mmap_sem);
 	up_write(&current->mm->mmap_sem);
+
+	if (err)
+		goto free_kpmd_buffer;
 
 	
 	if (copy_to_user((unsigned long *) fake_pgd, (unsigned long *)
 		     kernel_pgd_base, PAGE_SIZE)){
-		err = -EFAULT;
-		goto free_kbuffer;
+		err = -ENOMEM;
+		goto free_kpmd_buffer;
 	}
 
 	for (i = 0; i < my_walk_info->pmd_counter; i++) {
@@ -218,24 +218,27 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		source = my_walk_info->pmd_buf[i];
 		dest = (unsigned long *) (fake_pmds + i * PAGE_SIZE);
 		result = copy_to_user(dest, source, PAGE_SIZE);
-		if (result) 
-			break;
+		if (result){
+			err = -ENOMEM;
+			goto free_kpmd_buffer;
+		} 
 	}
-
-free_kbuffer:
+free_kpmd_buffer:
 	for (i = 0; i < my_walk_info->pmd_counter; i++)
 		kfree(my_walk_info->pmd_buf[i]);
-
-	kfree(kernel_pgd_base);
-	kfree(my_walk_info);
-
-	if (err == 0)
-		return 0;
+	goto free_kpgd_buffer;
 
 sem_release:
 	if (pid != -1)
 		up_write(&target_tsk->mm->mmap_sem);
 	up_write(&current->mm->mmap_sem);
-	
+
+free_kpgd_buffer:
+	kfree(kernel_pgd_base);
+
+free_walk_info:
+	kfree(&my_walk_info);
+		
 	return err;
+
 }
