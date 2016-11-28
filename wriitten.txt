@@ -11,381 +11,379 @@ start with /system/fonts/
 /system/fonts/NotoSansSC-Regular.otf
 /system/fonts/DroidSansFallback.ttf
 /system/fonts/DroidSansChinese.ttf
-cf791000-cfa00000 r--p 00000000 b3:18 1748                               /system/fonts/NotoColorEmoji.ttf
-cff75000-cff8e000 r--p 00000000 b3:18 1682                               /system/fonts/NotoSansMyanmarUI-Regular.ttf
-cff8e000-cff96000 r--p 00000000 b3:18 239                                /system/fonts/SmartZawgyi.ttf
-cff96000-cffaa000 r--p 00000000 b3:18 4202                               /system/fonts/NotoSansOriyaUI-Regular.ttf
-cffaa000-cffc6000 r--p 00000000 b3:18 1663                               /system/fonts/NotoSansTeluguUI-Regular.ttf
-cffc6000-cffe1000 r--p 00000000 b3:18 225                                /system/fonts/NotoSansBengaliUI-Regular.ttf
-d0222000-d0236000 r--p 00000000 b3:18 212                                /system/fonts/NotoSansKannadaUI-Regular.ttf
-d0636000-d0860000 r--p 00000000 b3:18 1636                               /system/fonts/Jomolhari.ttf
-d09a1000-d09be000 r--p 00000000 b3:18 231                                /system/fonts/NotoSansGujaratiUI-Regular.ttf
-d1402000-d140a000 r--p 00000000 b3:18 187                                /system/fonts/NotoSansLaoUI-Regular.ttf
-d140a000-d1418000 r--p 00000000 b3:18 248                                /system/fonts/NotoSansMalayalamUI-Regular.ttf
-d141b000-d1425000 r--p 00000000 b3:18 166                                /system/fonts/NotoSansKhmerUI-Regular.ttf
-d1425000-d142e000 r--p 00000000 b3:18 1744                               /system/fonts/NotoSansTamilUI-Regular.ttf
-d142e000-d1436000 r--p 00000000 b3:18 199                                /system/fonts/NotoSansGurmukhiUI-Regular.ttf
-d1436000-d1455000 r--p 00000000 b3:18 1754                               /system/fonts/NotoSansDevanagariUI-Regular.ttf
-d1455000-d1472000 r--p 00000000 b3:18 4192                               /system/fonts/NotoNaskhArabicUI-Regular.ttf
-d1472000-d148e000 r--p 00000000 b3:18 4196                               /system/fonts/NotoSansMongolian-Regular.ttf
-d14f0000-d14f4000 r--p 00000000 b3:18 213                                /system/fonts/NotoSansTaiViet-Regular.ttf
-d14f4000-d1500000 r--p 00000000 b3:18 194                                /system/fonts/NotoSansTaiTham-Regular.ttf
-d1603000-d1605000 r--p 00000000 b3:18 165                                /system/fonts/NotoSansTagbanwa-Regular.ttf
-d1605000-d1611000 r--p 00000000 b3:18 4204                               /system/fonts/NotoSansSyriacEstrangela-Regular.ttf
-d1611000-d1615000 r--p 00000000 b3:18 181                                /system/fonts/NotoSansSylotiNagri-Regular.ttf
-d1615000-d1618000 r--p 00000000 b3:18 226                                /system/fonts/NotoSansSundanese-Regular.ttf
-d1618000-d161d000 r--p 00000000 b3:18 236                                /system/fonts/NotoSansSaurashtra-Regular.ttf
-d161d000-d161f000 r--p 00000000 b3:18 245                                /system/fonts/NotoSansRejang-Regular.ttf
-d161f000-d1621000 r--p 00000000 b3:18 261                                /system/fonts/NotoSansOlChiki-Regular.ttf
-d1621000-d1626000 r--p 00000000 b3:18 4197                               /system/fonts/NotoSansNKo-Regular.ttf
-d1626000-d162a000 r--p 00000000 b3:18 4198                               /system/fonts/NotoSansNewTaiLue-Regular.ttf
-d162a000-d162e000 r--p 00000000 b3:18 184                                /system/fonts/NotoSansMeeteiMayek-Regular.ttf
-d162e000-d1632000 r--p 00000000 b3:18 4195                               /system/fonts/NotoSansMandaic-Regular.ttf
-d1632000-d1634000 r--p 00000000 b3:18 4194                               /system/fonts/NotoSansLisu-Regular.ttf
-d1634000-d1637000 r--p 00000000 b3:18 222                                /system/fonts/NotoSansLimbu-Regular.ttf
-d1637000-d1650000 r--p 00000000 b3:18 211                                /system/fonts/NotoSansLepcha-Regular.ttf
-d1650000-d1652000 r--p 00000000 b3:18 173                                /system/fonts/NotoSansKayahLi-Regular.ttf
-d1652000-d165b000 r--p 00000000 b3:18 179                                /system/fonts/NotoSansJavanese-Regular.ttf
-d165b000-d165d000 r--p 00000000 b3:18 167                                /system/fonts/NotoSansHanunoo-Regular.ttf
-d165d000-d1661000 r--p 00000000 b3:18 252                                /system/fonts/NotoSansGlagolitic-Regular.ttf
-d1661000-d1667000 r--p 00000000 b3:18 235                                /system/fonts/NotoSansCoptic-Regular.ttf
-d1667000-d1670000 r--p 00000000 b3:18 191                                /system/fonts/NotoSansCherokee-Regular.ttf
-d1670000-d167c000 r--p 00000000 b3:18 257                                /system/fonts/NotoSansCanadianAboriginal-Regular.ttf
-d167c000-d1680000 r--p 00000000 b3:18 210                                /system/fonts/NotoSansBatak-Regular.ttf
-d1680000-d16a1000 r--p 00000000 b3:18 4193                               /system/fonts/NotoSansBamum-Regular.ttf
-d16a1000-d16a9000 r--p 00000000 b3:18 161                                /system/fonts/NotoSansBalinese-Regular.ttf
-d16a9000-d16c4000 r--p 00000000 b3:18 168                                /system/fonts/NotoSansMyanmar-Regular.ttf
-d16c4000-d16eb000 r--p 00000000 b3:18 1964                               /system/fonts/NotoSansSinhala-Regular.ttf
-d16eb000-d1700000 r--p 00000000 b3:18 4200                               /system/fonts/NotoSansOriya-Regular.ttf
-d1800000-d1806000 r--p 00000000 b3:18 221                                /system/fonts/NotoSansCham-Regular.ttf
-d1806000-d180e000 r--p 00000000 b3:18 239                                /system/fonts/SmartZawgyi.ttf
-d180e000-d1822000 r--p 00000000 b3:18 1717                               /system/fonts/NotoSansKannada-Regular.ttf
-d1822000-d183d000 r--p 00000000 b3:18 227                                /system/fonts/NotoSansTelugu-Regular.ttf
-d183d000-d1856000 r--p 00000000 b3:18 259                                /system/fonts/NotoSansBengali-Regular.ttf
-d1856000-d1864000 r--p 00000000 b3:18 224                                /system/fonts/NotoSansMalayalam-Regular.ttf
-d1864000-d1886000 r--p 00000000 b3:18 1723                               /system/fonts/NotoSansDevanagari-Regular.ttf
-d198c000-d198e000 r--p 00000000 b3:18 182                                /system/fonts/NotoSansBuhid-Regular.ttf
-d198e000-d19ac000 r--p 00000000 b3:18 186                                /system/fonts/NotoSansGujarati-Regular.ttf
-d1bb1000-d1bba000 r--p 00000000 b3:18 253                                /system/fonts/NotoSansKhmer-Regular.ttf
-d1bba000-d1bc3000 r--p 00000000 b3:18 1747                               /system/fonts/NotoSansTamil-Regular.ttf
-d1bc3000-d1be5000 r--p 00000000 b3:18 220                                /system/fonts/NotoSansEthiopic-Regular.ttf
-d1be5000-d1c30000 r--p 00000000 b3:18 1749                               /system/fonts/Roboto-Regular.ttf
-d3fe0000-d3fe8000 r--p 00000000 b3:18 241                                /system/fonts/NotoSansLao-Regular.ttf
-d3fe8000-d3ff0000 r--p 00000000 b3:18 195                                /system/fonts/NotoSansGurmukhi-Regular.ttf
-d3ff0000-d3ff6000 r--p 00000000 b3:18 1641                               /system/fonts/NotoSansThai-Regular.ttf
-d4601000-d4605000 r--p 00000000 b3:18 178                                /system/fonts/NotoSansThaana-Regular.ttf
-d460a000-d460c000 r--p 00000000 b3:18 249                                /system/fonts/NotoSansBuginese-Regular.ttf
-d4620000-d4625000 r--p 00000000 b3:18 205                                /system/fonts/NotoSansGeorgian-Regular.ttf
-d4625000-d462a000 r--p 00000000 b3:18 1732                               /system/fonts/NotoSansHebrew-Regular.ttf
-d462a000-d4675000 r--p 00000000 b3:18 1686                               /system/fonts/Roboto-Light.ttf
-d467a000-d467e000 r--p 00000000 b3:18 1752                               /system/fonts/NotoSansArmenian-Regular.ttf
-d467e000-d469b000 r--p 00000000 b3:18 4190                               /system/fonts/NotoNaskhArabic-Regular.ttf
-d8ce2000-d959a000 r--p 00000000 b3:18 1633                               /system/fonts/DroidSansChinese.ttf
-d9d78000-d9dc2000 r--p 00000000 b3:18 1750                               /system/fonts/Roboto-Bold.ttf
-dadcb000-dadd1000 r--p 00000000 b3:18 1728                               /system/fonts/NotoSansThaiUI-Regular.ttf
-dadd1000-dadd7000 r--p 00000000 b3:18 1639                               /system/fonts/Lohit-Punjabi.ttf
-daded000-dae2f000 r--p 00000000 b3:18 1662                               /system/fonts/NotoSansSymbols-Regular-Subsetted.ttf
-dae2f000-dae4d000 r--p 00000000 b3:18 183                                /system/fonts/NotoSansYi-Regular.ttf
-dae4d000-dae5d000 r--p 00000000 b3:18 4207                               /system/fonts/NotoSansVai-Regular.ttf
-dae5d000-dae61000 r--p 00000000 b3:18 206                                /system/fonts/NotoSansTifinagh-Regular.ttf
-dae61000-daec3000 r--p 00000000 b3:18 4206                               /system/fonts/NotoSansTibetan-Regular.ttf
-e82eb000-e8a7f000 r--p 00000000 b3:18 1761                               /system/fonts/slim.ttf
-e8a89000-e8a93000 r--p 00000000 b3:18 1625                               /system/fonts/CarroisGothicSC-Regular.ttf
-e8aa7000-e8ac4000 r--p 00000000 b3:18 1629                               /system/fonts/DancingScript-Bold.ttf
-e8ace000-e8aeb000 r--p 00000000 b3:18 1630                               /system/fonts/DancingScript-Regular.ttf
-e8aeb000-e8afa000 r--p 00000000 b3:18 1627                               /system/fonts/ComingSoon.ttf
-e8afa000-e8b0b000 r--p 00000000 b3:18 1628                               /system/fonts/CutiveMono.ttf
-e8b0b000-e8b4c000 r--p 00000000 b3:18 1738                               /system/fonts/NotoSerif-BoldItalic.ttf
-e8b4c000-e8b89000 r--p 00000000 b3:18 1742                               /system/fonts/NotoSerif-Italic.ttf
-e8b89000-e9441000 r--p 00000000 b3:18 1633                               /system/fonts/DroidSansChinese.ttf
-e94c3000-e94df000 r--p 00000000 b3:18 4196                               /system/fonts/NotoSansMongolian-Regular.ttf
-e94df000-e94e2000 r--p 00000000 b3:18 180                                /system/fonts/NotoSansTaiLe-Regular.ttf
-e94e2000-e94e8000 r--p 00000000 b3:18 1639                               /system/fonts/Lohit-Punjabi.ttf
-e94ef000-e96af000 r--p 00000000 b3:18 228                                /system/fonts/NotoSansKR-Regular.otf
-e96b6000-e99c4000 r--p 00000000 b3:18 1735                               /system/fonts/NotoSansJP-Regular.otf
-e99c4000-e9cb8000 r--p 00000000 b3:18 4205                               /system/fonts/NotoSansTC-Regular.otf
-e9cb8000-ea480000 r--p 00000000 b3:18 4203                               /system/fonts/NotoSansSC-Regular.otf
-ea480000-ea842000 r--p 00000000 b3:18 201                                /system/fonts/DroidSansFallback.ttf
-ea842000-eb0fa000 r--p 00000000 b3:18 1633                               /system/fonts/DroidSansChinese.ttf
-eb0fa000-eb369000 r--p 00000000 b3:18 1748                               /system/fonts/NotoColorEmoji.ttf
-eb369000-eb3ab000 r--p 00000000 b3:18 1662                               /system/fonts/NotoSansSymbols-Regular-Subsetted.ttf
-eb3ab000-eb3c9000 r--p 00000000 b3:18 183                                /system/fonts/NotoSansYi-Regular.ttf
-eb3c9000-eb3d9000 r--p 00000000 b3:18 4207                               /system/fonts/NotoSansVai-Regular.ttf
-eb3e0000-eb3e4000 r--p 00000000 b3:18 206                                /system/fonts/NotoSansTifinagh-Regular.ttf
-eb3e4000-eb446000 r--p 00000000 b3:18 4206                               /system/fonts/NotoSansTibetan-Regular.ttf
-eb446000-eb670000 r--p 00000000 b3:18 1636                               /system/fonts/Jomolhari.ttf
-eb670000-eb674000 r--p 00000000 b3:18 213                                /system/fonts/NotoSansTaiViet-Regular.ttf
-eb674000-eb680000 r--p 00000000 b3:18 194                                /system/fonts/NotoSansTaiTham-Regular.ttf
-eb680000-eb682000 r--p 00000000 b3:18 165                                /system/fonts/NotoSansTagbanwa-Regular.ttf
-eb682000-eb68e000 r--p 00000000 b3:18 4204                               /system/fonts/NotoSansSyriacEstrangela-Regular.ttf
-eb68e000-eb692000 r--p 00000000 b3:18 181                                /system/fonts/NotoSansSylotiNagri-Regular.ttf
-eb692000-eb695000 r--p 00000000 b3:18 226                                /system/fonts/NotoSansSundanese-Regular.ttf
-eb695000-eb69a000 r--p 00000000 b3:18 236                                /system/fonts/NotoSansSaurashtra-Regular.ttf
-eb69a000-eb69c000 r--p 00000000 b3:18 245                                /system/fonts/NotoSansRejang-Regular.ttf
-eb69c000-eb69e000 r--p 00000000 b3:18 261                                /system/fonts/NotoSansOlChiki-Regular.ttf
-eb69e000-eb6a3000 r--p 00000000 b3:18 4197                               /system/fonts/NotoSansNKo-Regular.ttf
-eb6a3000-eb6a7000 r--p 00000000 b3:18 4198                               /system/fonts/NotoSansNewTaiLue-Regular.ttf
-eb6a7000-eb6ab000 r--p 00000000 b3:18 184                                /system/fonts/NotoSansMeeteiMayek-Regular.ttf
-eb6ab000-eb6af000 r--p 00000000 b3:18 4195                               /system/fonts/NotoSansMandaic-Regular.ttf
-eb6af000-eb6b1000 r--p 00000000 b3:18 4194                               /system/fonts/NotoSansLisu-Regular.ttf
-eb6b1000-eb6b4000 r--p 00000000 b3:18 222                                /system/fonts/NotoSansLimbu-Regular.ttf
-eb6b4000-eb6cd000 r--p 00000000 b3:18 211                                /system/fonts/NotoSansLepcha-Regular.ttf
-eb6cd000-eb6cf000 r--p 00000000 b3:18 173                                /system/fonts/NotoSansKayahLi-Regular.ttf
-eb6cf000-eb6d8000 r--p 00000000 b3:18 179                                /system/fonts/NotoSansJavanese-Regular.ttf
-eb6d8000-eb6dc000 r--p 00000000 b3:18 252                                /system/fonts/NotoSansGlagolitic-Regular.ttf
-eb6dc000-eb6e2000 r--p 00000000 b3:18 235                                /system/fonts/NotoSansCoptic-Regular.ttf
-eb6e2000-eb6eb000 r--p 00000000 b3:18 191                                /system/fonts/NotoSansCherokee-Regular.ttf
-eb6eb000-eb6f7000 r--p 00000000 b3:18 257                                /system/fonts/NotoSansCanadianAboriginal-Regular.ttf
-eb6f7000-eb6fb000 r--p 00000000 b3:18 210                                /system/fonts/NotoSansBatak-Regular.ttf
-eb6fb000-eb71c000 r--p 00000000 b3:18 4193                               /system/fonts/NotoSansBamum-Regular.ttf
-eb71c000-eb724000 r--p 00000000 b3:18 161                                /system/fonts/NotoSansBalinese-Regular.ttf
-eb724000-eb72a000 r--p 00000000 b3:18 162                                /system/fonts/NotoSansCham-Bold.ttf
-eb72a000-eb730000 r--p 00000000 b3:18 221                                /system/fonts/NotoSansCham-Regular.ttf
-eb730000-eb734000 r--p 00000000 b3:18 256                                /system/fonts/NotoSansThaana-Bold.ttf
-eb734000-eb738000 r--p 00000000 b3:18 178                                /system/fonts/NotoSansThaana-Regular.ttf
-eb738000-eb752000 r--p 00000000 b3:18 1683                               /system/fonts/NotoSansMyanmarUI-Bold.ttf
-eb752000-eb76b000 r--p 00000000 b3:18 1682                               /system/fonts/NotoSansMyanmarUI-Regular.ttf
-eb76b000-eb786000 r--p 00000000 b3:18 1756                               /system/fonts/NotoSansMyanmar-Bold.ttf
-eb786000-eb7a1000 r--p 00000000 b3:18 168                                /system/fonts/NotoSansMyanmar-Regular.ttf
-eb7a1000-eb7a9000 r--p 00000000 b3:18 239                                /system/fonts/SmartZawgyi.ttf
-eb7a9000-eb7b1000 r--p 00000000 b3:18 239                                /system/fonts/SmartZawgyi.ttf
-eb7b1000-eb7b9000 r--p 00000000 b3:18 219                                /system/fonts/NotoSansLaoUI-Bold.ttf
-eb7b9000-eb7c1000 r--p 00000000 b3:18 187                                /system/fonts/NotoSansLaoUI-Regular.ttf
-eb7c1000-eb7c9000 r--p 00000000 b3:18 204                                /system/fonts/NotoSansLao-Bold.ttf
-eb7c9000-eb7d1000 r--p 00000000 b3:18 241                                /system/fonts/NotoSansLao-Regular.ttf
-eb7d1000-eb7da000 r--p 00000000 b3:18 260                                /system/fonts/NotoSansKhmerUI-Bold.ttf
-eb7da000-eb7e4000 r--p 00000000 b3:18 166                                /system/fonts/NotoSansKhmerUI-Regular.ttf
-eb7e4000-eb7ed000 r--p 00000000 b3:18 258                                /system/fonts/NotoSansKhmer-Bold.ttf
-eb7ed000-eb7f6000 r--p 00000000 b3:18 253                                /system/fonts/NotoSansKhmer-Regular.ttf
-eb7f6000-eb81c000 r--p 00000000 b3:18 1681                               /system/fonts/NotoSansSinhala-Bold.ttf
-eb81c000-eb843000 r--p 00000000 b3:18 1964                               /system/fonts/NotoSansSinhala-Regular.ttf
-eb843000-eb857000 r--p 00000000 b3:18 4201                               /system/fonts/NotoSansOriyaUI-Bold.ttf
-eb857000-eb86b000 r--p 00000000 b3:18 4202                               /system/fonts/NotoSansOriyaUI-Regular.ttf
-eb86b000-eb880000 r--p 00000000 b3:18 4199                               /system/fonts/NotoSansOriya-Bold.ttf
-eb880000-eb895000 r--p 00000000 b3:18 4200                               /system/fonts/NotoSansOriya-Regular.ttf
-eb895000-eb8a9000 r--p 00000000 b3:18 174                                /system/fonts/NotoSansKannadaUI-Bold.ttf
-eb8a9000-eb8bd000 r--p 00000000 b3:18 212                                /system/fonts/NotoSansKannadaUI-Regular.ttf
-eb8bd000-eb8d1000 r--p 00000000 b3:18 1635                               /system/fonts/NotoSansKannada-Bold.ttf
-eb8d1000-eb8e5000 r--p 00000000 b3:18 1717                               /system/fonts/NotoSansKannada-Regular.ttf
-eb8e5000-eb901000 r--p 00000000 b3:18 1722                               /system/fonts/NotoSansTeluguUI-Bold.ttf
-eb901000-eb91d000 r--p 00000000 b3:18 1663                               /system/fonts/NotoSansTeluguUI-Regular.ttf
-eb91d000-eb938000 r--p 00000000 b3:18 170                                /system/fonts/NotoSansTelugu-Bold.ttf
-eb938000-eb953000 r--p 00000000 b3:18 227                                /system/fonts/NotoSansTelugu-Regular.ttf
-eb953000-eb96d000 r--p 00000000 b3:18 240                                /system/fonts/NotoSansBengaliUI-Bold.ttf
-eb96d000-eb988000 r--p 00000000 b3:18 225                                /system/fonts/NotoSansBengaliUI-Regular.ttf
-eb988000-eb9a0000 r--p 00000000 b3:18 185                                /system/fonts/NotoSansBengali-Bold.ttf
-eb9a0000-eb9b9000 r--p 00000000 b3:18 259                                /system/fonts/NotoSansBengali-Regular.ttf
-eb9b9000-eb9c7000 r--p 00000000 b3:18 200                                /system/fonts/NotoSansMalayalamUI-Bold.ttf
-eb9c7000-eb9d5000 r--p 00000000 b3:18 248                                /system/fonts/NotoSansMalayalamUI-Regular.ttf
-eb9d5000-eb9e3000 r--p 00000000 b3:18 232                                /system/fonts/NotoSansMalayalam-Bold.ttf
-eb9e3000-eb9f1000 r--p 00000000 b3:18 224                                /system/fonts/NotoSansMalayalam-Regular.ttf
-eb9f1000-eb9fa000 r--p 00000000 b3:18 1745                               /system/fonts/NotoSansTamilUI-Bold.ttf
-eb9fa000-eba03000 r--p 00000000 b3:18 1744                               /system/fonts/NotoSansTamilUI-Regular.ttf
-eba03000-eba0c000 r--p 00000000 b3:18 1746                               /system/fonts/NotoSansTamil-Bold.ttf
-eba0c000-eba15000 r--p 00000000 b3:18 1747                               /system/fonts/NotoSansTamil-Regular.ttf
-eba15000-eba1d000 r--p 00000000 b3:18 190                                /system/fonts/NotoSansGurmukhiUI-Bold.ttf
-eba1d000-eba25000 r--p 00000000 b3:18 199                                /system/fonts/NotoSansGurmukhiUI-Regular.ttf
-eba25000-eba2d000 r--p 00000000 b3:18 223                                /system/fonts/NotoSansGurmukhi-Bold.ttf
-eba2d000-eba35000 r--p 00000000 b3:18 195                                /system/fonts/NotoSansGurmukhi-Regular.ttf
-eba35000-eba51000 r--p 00000000 b3:18 207                                /system/fonts/NotoSansGujaratiUI-Bold.ttf
-eba51000-eba6e000 r--p 00000000 b3:18 231                                /system/fonts/NotoSansGujaratiUI-Regular.ttf
-eba6e000-eba8b000 r--p 00000000 b3:18 244                                /system/fonts/NotoSansGujarati-Bold.ttf
-eba8b000-ebaa9000 r--p 00000000 b3:18 186                                /system/fonts/NotoSansGujarati-Regular.ttf
-ebaa9000-ebac7000 r--p 00000000 b3:18 1740                               /system/fonts/NotoSansDevanagariUI-Bold.ttf
-ebac7000-ebae6000 r--p 00000000 b3:18 1754                               /system/fonts/NotoSansDevanagariUI-Regular.ttf
-ebae6000-ebb07000 r--p 00000000 b3:18 1755                               /system/fonts/NotoSansDevanagari-Bold.ttf
-ebb07000-ebb29000 r--p 00000000 b3:18 1723                               /system/fonts/NotoSansDevanagari-Regular.ttf
-ebb29000-ebb2e000 r--p 00000000 b3:18 169                                /system/fonts/NotoSansGeorgian-Bold.ttf
-ebb2e000-ebb33000 r--p 00000000 b3:18 205                                /system/fonts/NotoSansGeorgian-Regular.ttf
-ebb33000-ebb55000 r--p 00000000 b3:18 198                                /system/fonts/NotoSansEthiopic-Bold.ttf
-ebb55000-ebb77000 r--p 00000000 b3:18 220                                /system/fonts/NotoSansEthiopic-Regular.ttf
-ebb77000-ebb94000 r--p 00000000 b3:18 4191                               /system/fonts/NotoNaskhArabicUI-Bold.ttf
-ebb94000-ebbb1000 r--p 00000000 b3:18 4192                               /system/fonts/NotoNaskhArabicUI-Regular.ttf
-ebbb1000-ebc01000 r--p 00000000 b3:18 1725                               /system/fonts/Roboto-BoldItalic.ttf
-ebc01000-ebc4b000 r--p 00000000 b3:18 1750                               /system/fonts/Roboto-Bold.ttf
-ebc4b000-ebc9a000 r--p 00000000 b3:18 1708                               /system/fonts/Roboto-BlackItalic.ttf
-ebc9a000-ebce5000 r--p 00000000 b3:18 1733                               /system/fonts/Roboto-Black.ttf
-ebce5000-ebd34000 r--p 00000000 b3:18 1729                               /system/fonts/Roboto-MediumItalic.ttf
-ebd8b000-ebd8f000 r--p 00000000 b3:18 1757                               /system/fonts/NotoSansArmenian-Bold.ttf
-ebd8f000-ebd94000 r--p 00000000 b3:18 1714                               /system/fonts/NotoSansThaiUI-Bold.ttf
-ebd94000-ebd9a000 r--p 00000000 b3:18 1728                               /system/fonts/NotoSansThaiUI-Regular.ttf
-ebd9a000-ebdb7000 r--p 00000000 b3:18 4189                               /system/fonts/NotoNaskhArabic-Bold.ttf
-ebdb7000-ebe01000 r--p 00000000 b3:18 1709                               /system/fonts/Roboto-Medium.ttf
-ebe01000-ebe50000 r--p 00000000 b3:18 1751                               /system/fonts/Roboto-Italic.ttf
-ebe50000-ebe9b000 r--p 00000000 b3:18 1749                               /system/fonts/Roboto-Regular.ttf
-ebe9b000-ebeec000 r--p 00000000 b3:18 1706                               /system/fonts/Roboto-LightItalic.ttf
-ebeec000-ebf37000 r--p 00000000 b3:18 1686                               /system/fonts/Roboto-Light.ttf
-ebf37000-ebf87000 r--p 00000000 b3:18 1713                               /system/fonts/Roboto-ThinItalic.ttf
-ebf87000-ebfd2000 r--p 00000000 b3:18 1724                               /system/fonts/Roboto-Thin.ttf
-ec0b7000-ec0bb000 r--p 00000000 b3:18 1752                               /system/fonts/NotoSansArmenian-Regular.ttf
-ec0bb000-ec0c0000 r--p 00000000 b3:18 1759                               /system/fonts/NotoSansThai-Bold.ttf
-ec0c0000-ec0c6000 r--p 00000000 b3:18 1641                               /system/fonts/NotoSansThai-Regular.ttf
-ec0c6000-ec0cb000 r--p 00000000 b3:18 1734                               /system/fonts/NotoSansHebrew-Bold.ttf
-ec0cb000-ec0e8000 r--p 00000000 b3:18 4190                               /system/fonts/NotoNaskhArabic-Regular.ttf
-ec334000-ec339000 r--p 00000000 b3:18 1732                               /system/fonts/NotoSansHebrew-Regular.ttf
-ec3ea000-ec3ec000 r--p 00000000 b3:18 167                                /system/fonts/NotoSansHanunoo-Regular.ttf
-ec49a000-ec49c000 r--p 00000000 b3:18 182                                /system/fonts/NotoSansBuhid-Regular.ttf
-ec5b0000-ec5cc000 r--p 00000000 b3:18 1741                               /system/fonts/DroidSansMono.ttf
-ec5cc000-ec609000 r--p 00000000 b3:18 1664                               /system/fonts/NotoSerif-Bold.ttf
-ec609000-ec646000 r--p 00000000 b3:18 1739                               /system/fonts/NotoSerif-Regular.ttf
-ec646000-ec694000 r--p 00000000 b3:18 1758                               /system/fonts/RobotoCondensed-BoldItalic.ttf
-ec6f4000-ec73d000 r--p 00000000 b3:18 1647                               /system/fonts/RobotoCondensed-Bold.ttf
-ec73d000-ec78c000 r--p 00000000 b3:18 1743                               /system/fonts/RobotoCondensed-Italic.ttf
-ec78c000-ec7d6000 r--p 00000000 b3:18 1753                               /system/fonts/RobotoCondensed-Regular.ttf
-ec7d6000-ec825000 r--p 00000000 b3:18 1646                               /system/fonts/RobotoCondensed-LightItalic.ttf
-ec825000-ec86e000 r--p 00000000 b3:18 1687                               /system/fonts/RobotoCondensed-Light.ttf
-ecadd000-ecadf000 r--p 00000000 b3:18 249                                /system/fonts/NotoSansBuginese-Regular.ttf
-eea11000-eea14000 r--p 00000000 b3:18 180                                /system/fonts/NotoSansTaiLe-Regular.ttf
+ /system/fonts/NotoColorEmoji.ttf
+ /system/fonts/NotoSansMyanmarUI-Regular.ttf
+                             /system/fonts/SmartZawgyi.ttf
+                           /system/fonts/NotoSansOriyaUI-Regular.ttf
+                               /system/fonts/NotoSansTeluguUI-Regular.ttf
+                              /system/fonts/NotoSansBengaliUI-Regular.ttf
+                               /system/fonts/NotoSansKannadaUI-Regular.ttf
+                              /system/fonts/Jomolhari.ttf
+                               /system/fonts/NotoSansGujaratiUI-Regular.ttf
+                              /system/fonts/NotoSansLaoUI-Regular.ttf
+                              /system/fonts/NotoSansMalayalamUI-Regular.ttf
+                             /system/fonts/NotoSansKhmerUI-Regular.ttf
+                              /system/fonts/NotoSansTamilUI-Regular.ttf
+                                /system/fonts/NotoSansGurmukhiUI-Regular.ttf
+                               /system/fonts/NotoSansDevanagariUI-Regular.ttf
+                              /system/fonts/NotoNaskhArabicUI-Regular.ttf
+                             /system/fonts/NotoSansMongolian-Regular.ttf
+ /system/fonts/NotoSansTaiViet-Regular.ttf
+/system/fonts/NotoSansTaiTham-Regular.ttf
+ /system/fonts/NotoSansTagbanwa-Regular.ttf
+ /system/fonts/NotoSansSyriacEstrangela-Regular.ttf
+ /system/fonts/NotoSansSylotiNagri-Regular.ttf
+/system/fonts/NotoSansSundanese-Regular.ttf
+/system/fonts/NotoSansSaurashtra-Regular.ttf
+/system/fonts/NotoSansRejang-Regular.ttf
+ /system/fonts/NotoSansOlChiki-Regular.ttf
+/system/fonts/NotoSansNKo-Regular.ttf
+ /system/fonts/NotoSansNewTaiLue-Regular.ttf
+/system/fonts/NotoSansMeeteiMayek-Regular.ttf
+ /system/fonts/NotoSansMandaic-Regular.ttf
+/system/fonts/NotoSansLisu-Regular.ttf
+/system/fonts/NotoSansLimbu-Regular.ttf
+/system/fonts/NotoSansLepcha-Regular.ttf
+/system/fonts/NotoSansKayahLi-Regular.ttf
+ /system/fonts/NotoSansJavanese-Regular.ttf
+/system/fonts/NotoSansHanunoo-Regular.ttf
+ /system/fonts/NotoSansGlagolitic-Regular.ttf
+ /system/fonts/NotoSansCherokee-Regular.ttf
+/system/fonts/NotoSansCanadianAboriginal-Regular.ttf
+ /system/fonts/NotoSansBatak-Regular.ttf
+/system/fonts/NotoSansBamum-Regular.ttf
+ /system/fonts/NotoSansBalinese-Regular.ttf
+  /system/fonts/NotoSansMyanmar-Regular.ttf
+/system/fonts/NotoSansSinhala-Regular.ttf
+ /system/fonts/NotoSansOriya-Regular.ttf
+/system/fonts/NotoSansCham-Regular.ttf
+ /system/fonts/SmartZawgyi.ttf
+ /system/fonts/NotoSansKannada-Regular.ttf
+ /system/fonts/NotoSansTelugu-Regular.ttf
+/system/fonts/NotoSansBengali-Regular.ttf
+/system/fonts/NotoSansMalayalam-Regular.ttf
+/system/fonts/NotoSansDevanagari-Regular.ttf
+/system/fonts/NotoSansBuhid-Regular.ttf
+ /system/fonts/NotoSansGujarati-Regular.ttf
+ /system/fonts/NotoSansKhmer-Regular.ttf
+  /system/fonts/NotoSansTamil-Regular.ttf
+/system/fonts/NotoSansEthiopic-Regular.ttf
+/system/fonts/Roboto-Regular.ttf
+/system/fonts/NotoSansLao-Regular.ttf
+ /system/fonts/NotoSansGurmukhi-Regular.ttf
+ /system/fonts/NotoSansThai-Regular.ttf
+/system/fonts/NotoSansThaana-Regular.ttf
+ /system/fonts/NotoSansBuginese-Regular.ttf
+ /system/fonts/NotoSansGeorgian-Regular.ttf
+  /system/fonts/NotoSansHebrew-Regular.ttf
+/system/fonts/Roboto-Light.ttf
+ /system/fonts/NotoSansArmenian-Regular.ttf
+/system/fonts/NotoNaskhArabic-Regular.ttf
+/system/fonts/DroidSansChinese.ttf
+/system/fonts/Roboto-Bold.ttf
+/system/fonts/NotoSansThaiUI-Regular.ttf
+ /system/fonts/Lohit-Punjabi.ttf
+/system/fonts/NotoSansSymbols-Regular-Subsetted.ttf
+/system/fonts/NotoSansYi-Regular.ttf
+ /system/fonts/NotoSansVai-Regular.ttf
+/system/fonts/NotoSansTifinagh-Regular.ttf
+ /system/fonts/NotoSansTibetan-Regular.ttf
+/system/fonts/slim.ttf
+ /system/fonts/CarroisGothicSC-Regular.ttf
+/system/fonts/DancingScript-Bold.ttf
+ /system/fonts/DancingScript-Regular.ttf
+/system/fonts/ComingSoon.ttf
+ /system/fonts/CutiveMono.ttf
+/system/fonts/NotoSerif-BoldItalic.ttf
+ /system/fonts/NotoSerif-Italic.ttf
+ /system/fonts/DroidSansChinese.ttf
+ /system/fonts/NotoSansMongolian-Regular.ttf
+ /system/fonts/NotoSansTaiLe-Regular.ttf
+ /system/fonts/Lohit-Punjabi.ttf
+/system/fonts/NotoSansKR-Regular.otf
+ /system/fonts/NotoSansJP-Regular.otf
+ /system/fonts/NotoSansTC-Regular.otf
+ /system/fonts/NotoSansSC-Regular.otf
+ /system/fonts/DroidSansFallback.ttf
+/system/fonts/DroidSansChinese.ttf
+ /system/fonts/NotoColorEmoji.ttf
+ /system/fonts/NotoSansSymbols-Regular-Subsetted.ttf
+ /system/fonts/NotoSansYi-Regular.ttf
+/system/fonts/NotoSansVai-Regular.ttf
+/system/fonts/NotoSansTifinagh-Regular.ttf
+ /system/fonts/NotoSansTibetan-Regular.ttf
+/system/fonts/Jomolhari.ttf
+/system/fonts/NotoSansTaiViet-Regular.ttf
+/system/fonts/NotoSansTaiTham-Regular.ttf
+ /system/fonts/NotoSansTagbanwa-Regular.ttf
+ /system/fonts/NotoSansSyriacEstrangela-Regular.ttf
+/system/fonts/NotoSansSylotiNagri-Regular.ttf
+/system/fonts/NotoSansSundanese-Regular.ttf
+ /system/fonts/NotoSansSaurashtra-Regular.ttf
+ /system/fonts/NotoSansRejang-Regular.ttf
+/system/fonts/NotoSansOlChiki-Regular.ttf
+ /system/fonts/NotoSansNKo-Regular.ttf
+ /system/fonts/NotoSansNewTaiLue-Regular.ttf
+/system/fonts/NotoSansMeeteiMayek-Regular.ttf
+/system/fonts/NotoSansMandaic-Regular.ttf
+/system/fonts/NotoSansLisu-Regular.ttf
+/system/fonts/NotoSansLimbu-Regular.ttf
+  /system/fonts/NotoSansLepcha-Regular.ttf
+ /system/fonts/NotoSansKayahLi-Regular.ttf
+ /system/fonts/NotoSansJavanese-Regular.ttf
+ /system/fonts/NotoSansGlagolitic-Regular.ttf
+/system/fonts/NotoSansCoptic-Regular.ttf
+/system/fonts/NotoSansCherokee-Regular.ttf
+ /system/fonts/NotoSansCanadianAboriginal-Regular.ttf
+/system/fonts/NotoSansBatak-Regular.ttf
+/system/fonts/NotoSansBamum-Regular.ttf
+/system/fonts/NotoSansBalinese-Regular.ttf
+/system/fonts/NotoSansCham-Bold.ttf
+/system/fonts/NotoSansCham-Regular.ttf
+ /system/fonts/NotoSansThaana-Bold.ttf
+/system/fonts/NotoSansThaana-Regular.ttf
+ /system/fonts/NotoSansMyanmarUI-Bold.ttf
+ /system/fonts/NotoSansMyanmarUI-Regular.ttf
+ /system/fonts/NotoSansMyanmar-Bold.ttf
+/system/fonts/NotoSansMyanmar-Regular.ttf
+ /system/fonts/SmartZawgyi.ttf
+ /system/fonts/SmartZawgyi.ttf
+ /system/fonts/NotoSansLaoUI-Bold.ttf
+system/fonts/NotoSansLaoUI-Regular.ttf
+ /system/fonts/NotoSansLao-Bold.ttf
+/system/fonts/NotoSansLao-Regular.ttf
+ /system/fonts/NotoSansKhmerUI-Bold.ttf
+ /system/fonts/NotoSansKhmerUI-Regular.ttf
+  /system/fonts/NotoSansKhmer-Bold.ttf
+ /system/fonts/NotoSansKhmer-Regular.ttf
+/system/fonts/NotoSansSinhala-Bold.ttf
+/system/fonts/NotoSansSinhala-Regular.ttf
+ /system/fonts/NotoSansOriyaUI-Bold.ttf
+/system/fonts/NotoSansOriyaUI-Regular.ttf
+ /system/fonts/NotoSansOriya-Bold.ttf
+/system/fonts/NotoSansOriya-Regular.ttf
+ /system/fonts/NotoSansKannadaUI-Bold.ttf
+ /system/fonts/NotoSansKannadaUI-Regular.ttf
+/system/fonts/NotoSansKannada-Bold.ttf
+  /system/fonts/NotoSansKannada-Regular.ttf
+/system/fonts/NotoSansTeluguUI-Bold.ttf
+/system/fonts/NotoSansTeluguUI-Regular.ttf
+  /system/fonts/NotoSansTelugu-Bold.ttf
+/system/fonts/NotoSansTelugu-Regular.ttf
+ /system/fonts/NotoSansBengaliUI-Bold.ttf
+/system/fonts/NotoSansBengaliUI-Regular.ttf
+/system/fonts/NotoSansBengali-Bold.ttf
+/system/fonts/NotoSansBengali-Regular.ttf
+ /system/fonts/NotoSansMalayalamUI-Bold.ttf
+/system/fonts/NotoSansMalayalamUI-Regular.ttf
+ /system/fonts/NotoSansMalayalam-Bold.ttf
+ /system/fonts/NotoSansMalayalam-Regular.ttf
+/system/fonts/NotoSansTamilUI-Bold.ttf
+ /system/fonts/NotoSansTamilUI-Regular.ttf
+ /system/fonts/NotoSansTamil-Bold.ttf
+/system/fonts/NotoSansTamil-Regular.ttf
+ /system/fonts/NotoSansGurmukhiUI-Bold.ttf
+ /system/fonts/NotoSansGurmukhiUI-Regular.ttf
+/system/fonts/NotoSansGurmukhi-Bold.ttf
+ /system/fonts/NotoSansGurmukhi-Regular.ttf
+ /system/fonts/NotoSansGujaratiUI-Bold.ttf
+ /system/fonts/NotoSansGujaratiUI-Regular.ttf
+ /system/fonts/NotoSansGujarati-Bold.ttf
+ /system/fonts/NotoSansGujarati-Regular.ttf
+ /system/fonts/NotoSansDevanagariUI-Bold.ttf
+ /system/fonts/NotoSansDevanagariUI-Regular.ttf
+/system/fonts/NotoSansDevanagari-Bold.ttf
+/system/fonts/NotoSansDevanagari-Regular.ttf
+ /system/fonts/NotoSansGeorgian-Bold.ttf
+/system/fonts/NotoSansGeorgian-Regular.ttf
+ /system/fonts/NotoSansEthiopic-Bold.ttf
+ /system/fonts/NotoSansEthiopic-Regular.ttf
+ /system/fonts/NotoNaskhArabicUI-Bold.ttf
+/system/fonts/NotoNaskhArabicUI-Regular.ttf
+  /system/fonts/Roboto-BoldItalic.ttf
+/system/fonts/Roboto-Bold.ttf
+ /system/fonts/Roboto-BlackItalic.ttf
+  /system/fonts/Roboto-Black.ttf
+/system/fonts/Roboto-MediumItalic.ttf
+ /system/fonts/NotoSansArmenian-Bold.ttf
+  /system/fonts/NotoSansThaiUI-Bold.ttf
+/system/fonts/NotoSansThaiUI-Regular.ttf
+ /system/fonts/NotoNaskhArabic-Bold.ttf
+/system/fonts/Roboto-Medium.ttf
+ /system/fonts/Roboto-Italic.ttf
+ /system/fonts/Roboto-Regular.ttf
+/system/fonts/Roboto-LightItalic.ttf
+/system/fonts/Roboto-Light.ttf
+ /system/fonts/Roboto-ThinItalic.ttf
+  /system/fonts/Roboto-Thin.ttf
+ /system/fonts/NotoSansArmenian-Regular.ttf
+ /system/fonts/NotoSansThai-Bold.ttf
+ /system/fonts/NotoSansThai-Regular.ttf
+ /system/fonts/NotoSansHebrew-Bold.ttf
+ /system/fonts/NotoNaskhArabic-Regular.ttf
+ /system/fonts/NotoSansHebrew-Regular.ttf
+/system/fonts/NotoSansHanunoo-Regular.ttf
+ /system/fonts/NotoSansBuhid-Regular.ttf
+ /system/fonts/DroidSansMono.ttf
+ /system/fonts/NotoSerif-Bold.ttf
+ /system/fonts/NotoSerif-Regular.ttf
+/system/fonts/RobotoCondensed-BoldItalic.ttf
+ /system/fonts/RobotoCondensed-Bold.ttf
+/system/fonts/RobotoCondensed-Italic.ttf
+ /system/fonts/RobotoCondensed-Regular.ttf
+/system/fonts/RobotoCondensed-LightItalic.ttf
+/system/fonts/RobotoCondensed-Light.ttf
+ /system/fonts/NotoSansBuginese-Regular.ttf
+ /system/fonts/NotoSansTaiLe-Regular.ttf
 
 ##################start with /system/vendor
-e660f000-e6624000 r-xp 00000000 b3:18 2405                               /system/vendor/lib/libdiag.so
-ec9e9000-ec9ea000 rw-p 0000a000 b3:18 4463                               /system/vendor/lib/egl/eglSubDriverAndroid.so
-ecab8000-ecac3000 r-xp 00000000 b3:18 594                                /system/vendor/lib/egl/libGLESv2_adreno.so
-edca6000-edcad000 r-xp 00000000 b3:18 600                                /system/vendor/lib/egl/libGLESv1_CM_adreno.so
-edcb5000-ee49a000 r-xp 00000000 b3:18 4494                               /system/vendor/lib/libllvm-glnext.so
-ee4d2000-ee71a000 r-xp 00000000 b3:18 4466                               /system/vendor/lib/egl/libESXGLESv2_adreno.so
-ee73c000-ee760000 r-xp 00000000 b3:18 4465                               /system/vendor/lib/egl/libESXGLESv1_CM_adreno.so
-ee762000-ee768000 r-xp 00000000 b3:18 3044                               /system/vendor/lib/libadreno_utils.so
-ee76c000-ee77d000 r-xp 00000000 b3:18 4464                               /system/vendor/lib/egl/libESXEGL_adreno.so
-ee780000-ee7bb000 r-xp 00000000 b3:18 3399                               /system/vendor/lib/libgsl.so
-ee7be000-ee7c6000 r-xp 00000000 b3:18 577                                /system/vendor/lib/egl/libEGL_adreno.so
-ee8e8000-ee8ec000 r-xp 00000000 b3:18 2770                               /system/vendor/lib/libmdmdetect.so
-ee8f4000-ee8f5000 rw-p 00005000 b3:18 2797                               /system/vendor/lib/libidl.so
-ee8f5000-ee907000 r-xp 00000000 b3:18 2600                               /system/vendor/lib/libqmiservices.so
-ee90e000-ee91a000 r-xp 00000000 b3:18 2698                               /system/vendor/lib/libdsutils.so
-ee91d000-ee929000 r-xp 00000000 b3:18 2651                               /system/vendor/lib/libqmi_client_qmux.so
-ee938000-ee93d000 r-xp 00000000 b3:18 2388                               /system/vendor/lib/libqmi_encdec.so
-ee93f000-ee942000 r-xp 00000000 b3:18 3149                               /system/vendor/lib/libsmemlog.so
-ee945000-ee946000 r-xp 00000000 b3:18 3410                               /system/vendor/lib/libqmi_common_so.so
-ee948000-ee951000 r-xp 00000000 b3:18 2526                               /system/vendor/lib/libqmi_cci.so
-f61ff000-f6235000 r-xp 00000000 b3:18 4502                               /system/vendor/lib/libqc-opt.so
+ /system/vendor/lib/libdiag.so
+/system/vendor/lib/egl/eglSubDriverAndroid.so
+/system/vendor/lib/egl/libGLESv2_adreno.so
+/system/vendor/lib/egl/libGLESv1_CM_adreno.so
+/system/vendor/lib/libllvm-glnext.so
+/system/vendor/lib/egl/libESXGLESv2_adreno.so
+ /system/vendor/lib/egl/libESXGLESv1_CM_adreno.so
+/system/vendor/lib/libadreno_utils.so
+ /system/vendor/lib/egl/libESXEGL_adreno.so
+ /system/vendor/lib/libgsl.so
+ /system/vendor/lib/egl/libEGL_adreno.so
+/system/vendor/lib/libmdmdetect.so
+ /system/vendor/lib/libidl.so
+  /system/vendor/lib/libqmiservices.so
+ /system/vendor/lib/libdsutils.so
+/system/vendor/lib/libqmi_client_qmux.so
+/system/vendor/lib/libqmi_encdec.so
+/system/vendor/lib/libsmemlog.so
+/system/vendor/lib/libqmi_common_so.so
+/system/vendor/lib/libqmi_cci.so
+/system/vendor/lib/libqc-opt.so
 
 
-e6787000-e6788000 rw-p 00004000 b3:18 1778                               /system/lib/libwebviewchromium_loader.so
-e8149000-e814d000 r-xp 00000000 b3:18 1242                               /system/lib/libmedia_jni.huawei.so
-e815f000-e8160000 rw-p 0000e000 b3:18 1912                               /system/lib/libstagefright_amrnb_common.so
-e8160000-e817e000 r-xp 00000000 b3:18 1821                               /system/lib/libexif.so
-e81a3000-e81a4000 rw-p 00016000 b3:18 1601                               /system/lib/libmtp.so
-e81af000-e81ba000 r-xp 00000000 b3:18 1889                               /system/lib/libjhead.so
-e8205000-e8206000 rw-p 00047000 b3:18 1798                               /system/lib/libmedia_jni.so
-ec4c2000-ec4d8000 r-xp 00000000 b3:18 1863                               /system/lib/libhwaps.so
-ec924000-ec925000 rw-p 00003000 b3:18 1666                               /system/lib/libjnigraphics.so
-ec939000-ec941000 r-xp 00000000 b3:18 1808                               /system/lib/libcompiler_rt.so
-ec97c000-ec97d000 rw-p 00010000 b3:18 1610                               /system/lib/libandroid.so
-ec997000-ec99e000 r-xp 00000000 b3:18 1829                               /system/lib/libqservice.so
-ec9ac000-ec9ad000 rw-p 0000a000 b3:18 1910                               /system/lib/libqdutils.so
-ec9b5000-ec9bb000 r-xp 00000000 b3:18 1924                               /system/lib/hw/gralloc.msm8916.so
-ecae3000-ecae4000 rw-p 00003000 b3:18 1838                               /system/lib/libqdMetaData.so
-ecaec000-ecaf2000 r-xp 00000000 b3:18 1700                               /system/lib/libmemalloc.so
-ee8db000-ee8dc000 rw-p 00003000 b3:18 1763                               /system/lib/libhwdeviceinfo.so
-ee8dd000-ee8e1000 r-xp 00000000 b3:18 1901                               /system/lib/libfm_jni.so
-ee958000-ee959000 rw-p 00004000 b3:18 1857                               /system/lib/libqmi_nv_api.so
-ee959000-ee95d000 r-xp 00000000 b3:18 1856                               /system/lib/libqmi_oem_api.so
-ee965000-ee966000 rw-p 00005000 b3:18 1885                               /system/lib/libhw_hal.so
-ee966000-ee969000 r-xp 00000000 b3:18 1902                               /system/lib/libhwtheme_jni.so
-ee98a000-ee98b000 rw-p 00019000 b3:18 4281                               /system/lib/libkeymaster1.so
-ee98b000-ee994000 r-xp 00000000 b3:18 4282                               /system/lib/libkeymaster_messages.so
-ee9ac000-ee9ad000 rw-p 00015000 b3:18 4302                               /system/lib/libsoftkeymasterdevice.so
-ee9ae000-ee9b9000 r-xp 00000000 b3:18 1652                               /system/lib/libkeystore_binder.so
-ee9c1000-ee9c2000 rw-p 00004000 b3:18 4283                               /system/lib/libkeystore-engine.so
-ee9c2000-ee9d8000 r-xp 00000000 b3:18 1790                               /system/lib/libjavacrypto.so
-eea03000-eea04000 rw-p 00005000 b3:18 1660                               /system/lib/libpowergenie_native3.so
-eea04000-eea07000 r-xp 00000000 b3:18 1938                               /system/lib/hw/memtrack.msm8916.so
-eea10000-eea11000 rw-p 00005000 b3:18 1813                               /system/lib/libdrmbitmap.huawei.so
-eeac5000-eeac9000 r-xp 00000000 b3:18 1875                               /system/lib/libwebviewchromium_plat_support.so
-f04ae000-f04b0000 rw-p 00034000 b3:18 1726                               /system/lib/libjavacore.so
-f33e5000-f33e8000 r-xp 00000000 b3:18 4295                               /system/lib/libqti_performance.so
-f45f6000-f45f7000 rw-p 00003000 b3:18 1794                               /system/lib/libsigchain.so
-f45f7000-f4a2d000 r-xp 00000000 b3:18 1869                               /system/lib/libart.so
-f54c1000-f54c2000 rw-p 00a5b000 b3:18 1835                               /system/lib/libLLVM.so
-f54cb000-f5500000 r-xp 00000000 b3:18 112                                /system/lib/libbcinfo.so
-f555d000-f555e000 rw-p 00059000 b3:18 1816                               /system/lib/libbcc.so
-f555e000-f5568000 r-xp 00000000 b3:18 155                                /system/lib/libcommon_time_client.so
-f5585000-f5586000 rw-p 00018000 b3:18 4292                               /system/lib/libprotobuf-cpp-lite.so
-f5587000-f558e000 r-xp 00000000 b3:18 1576                               /system/lib/libstagefright_avc_common.so
-f5594000-f5595000 rw-p 00003000 b3:18 1880                               /system/lib/libstagefright_enc_common.so
-f5595000-f5599000 r-xp 00000000 b3:18 1876                               /system/lib/libpowermanager.so
-f5aa0000-f5ab0000 rw-p 00503000 b3:18 4237                               /system/lib/lib_k3_ffmpeg.so
-f6019000-f6036000 r-xp 00000000 b3:18 1616                               /system/lib/libvorbisidec.so
-f603f000-f6040000 rw-p 00005000 b3:18 1950                               /system/lib/libstagefright_yuv.so
-f6040000-f606e000 r-xp 00000000 b3:18 1658                               /system/lib/libstagefright_omx.so
-f60ad000-f60ae000 rw-p 0003a000 b3:18 1674                               /system/lib/libopus.so
-f60ae000-f60b3000 r-xp 00000000 b3:18 4285                               /system/lib/libmediautils.so
-f60ce000-f60cf000 rw-p 00018000 b3:18 154                                /system/lib/libdrmframework.so
-f60cf000-f60ed000 r-xp 00000000 b3:18 1721                               /system/lib/libRScpp.so
-f6131000-f6132000 rw-p 00040000 b3:18 1831                               /system/lib/libRS.so
-f6132000-f6139000 r-xp 00000000 b3:18 1600                               /system/lib/libspeexresampler.so
-f6145000-f6146000 rw-p 00009000 b3:18 1555                               /system/lib/libnbaio.so
-f6147000-f6159000 r-xp 00000000 b3:18 1952                               /system/lib/libpcre.so
-f6160000-f6161000 rw-p 00004000 b3:18 113                                /system/lib/liboeminfo.so
-f6161000-f616c000 r-xp 00000000 b3:18 1892                               /system/lib/libhuawei_secure.so
-f6179000-f617a000 rw-p 00005000 b3:18 1819                               /system/lib/libwpa_client.so
-f617b000-f618c000 r-xp 00000000 b3:18 1677                               /system/lib/libhwgl.so
-f61fe000-f61ff000 rw-p 0006f000 b3:18 1525                               /system/lib/libGLES_trace.so
-f6237000-f6295000 r-xp 00000000 b3:18 1860                               /system/lib/libft2.so
-f62c1000-f62c2000 rw-p 00028000 b3:18 1768                               /system/lib/libpng.so
-f62c3000-f62c6000 r-xp 00000000 b3:18 1784                               /system/lib/libsync.so
-f62ce000-f62cf000 rw-p 00005000 b3:18 1653                               /system/lib/libstdc++.so
-f62cf000-f62df000 r-xp 00000000 b3:18 1698                               /system/lib/libunwind.so
-f6331000-f6332000 rw-p 00009000 b3:18 4244                               /system/lib/libbase.so
-f6332000-f6337000 r-xp 00000000 b3:18 1573                               /system/lib/libeffects.so
-f633e000-f633f000 rw-p 00004000 b3:18 1670                               /system/lib/libstagefright_http_support.so
-f633f000-f6357000 r-xp 00000000 b3:18 1692                               /system/lib/libstagefright_foundation.so
-f64c8000-f64c9000 rw-p 0016d000 b3:18 1228                               /system/lib/libstagefright.so
-f64cb000-f64ce000 r-xp 00000000 b3:18 4239                               /system/lib/lib_oeminfo_interface.so
-f64d6000-f64d7000 rw-p 00004000 b3:18 1826                               /system/lib/libservices.huawei.so
-f64d7000-f653f000 r-xp 00000000 b3:18 1410                               /system/lib/libhwui.so
-f6550000-f6551000 rw-p 0000b000 b3:18 4290                               /system/lib/libperfhub_client.so
-f6551000-f655d000 r-xp 00000000 b3:18 4274                               /system/lib/libhwextdevice.so
-f6565000-f6566000 rw-p 00003000 b3:18 4297                               /system/lib/libradio_metadata.so
-f6566000-f656a000 r-xp 00000000 b3:18 1804                               /system/lib/libnativebridge.so
-f6571000-f6572000 rw-p 00004000 b3:18 1865                               /system/lib/libprocessgroup.so
-f6572000-f6581000 r-xp 00000000 b3:18 1678                               /system/lib/libminikin.so
-f6591000-f6592000 rw-p 0000c000 b3:18 1796                               /system/lib/libsoundtrigger.so
-f6593000-f659d000 r-xp 00000000 b3:18 4296                               /system/lib/libradio.so
-f65a6000-f65a7000 rw-p 00004000 b3:18 1873                               /system/lib/libnetd_client.so
-f65a7000-f65b4000 r-xp 00000000 b3:18 1443                               /system/lib/libimg_utils.so
-f65b7000-f69b5000 r-xp 00000000 b3:18 146                                /system/lib/libpdfium.so
-f69cc000-f69cd000 rw-p 00007000 b3:18 1895                               /system/lib/libaudioutils.so
-f69cd000-f69e7000 r-xp 00000000 b3:18 1765                               /system/lib/libz.so
-f6a34000-f6a35000 rw-p 0004a000 b3:18 1566                               /system/lib/libharfbuzz_ng.so
-f6a35000-f6a3a000 r-xp 00000000 b3:18 1871                               /system/lib/libusbhost.so
-f6a73000-f6a74000 rw-p 00036000 b3:18 1779                               /system/lib/libjpeg.so
-f6a76000-f6b0b000 r-xp 00000000 b3:18 1496                               /system/lib/libmedia.so
-f6c9a000-f6c9b000 rw-p 00170000 b3:18 1898                               /system/lib/libicui18n.so
-f6c9b000-f6daa000 r-xp 00000000 b3:18 1720                               /system/lib/libicuuc.so
-f6ddf000-f6de0000 rw-p 00024000 b3:18 151                                /system/lib/libssl.so
-f6de0000-f6e70000 r-xp 00000000 b3:18 156                                /system/lib/libcrypto.so
-f6ed1000-f6ed2000 rw-p 00053000 b3:18 1788                               /system/lib/libsonivox.so
-f6ed7000-f6ee5000 r-xp 00000000 b3:18 1907                               /system/lib/libselinux.so
-f6ef4000-f6ef5000 rw-p 0000b000 b3:18 1840                               /system/lib/libhardware_legacy.so
-f6ef6000-f6ef9000 r-xp 00000000 b3:18 1317                               /system/lib/libhardware.so
-f6f01000-f6f02000 rw-p 00004000 b3:18 1795                               /system/lib/libETC1.so
-f6f18000-f6f19000 rw-p 00015000 b3:18 1705                               /system/lib/libGLESv2.so
-f6f19000-f6f25000 r-xp 00000000 b3:18 1890                               /system/lib/libGLESv1_CM.so
-f6f86000-f6f8f000 rw-p 0005e000 b3:18 1881                               /system/lib/libEGL.so
-f6f92000-f6ff6000 r-xp 00000000 b3:18 1582                               /system/lib/libsqlite.so
-f7270000-f7272000 rw-p 00275000 b3:18 1855                               /system/lib/libskia.so
-f7277000-f727f000 r-xp 00000000 b3:18 1868                               /system/lib/libcamera_metadata.so
-f72b4000-f72b5000 rw-p 00032000 b3:18 159                                /system/lib/libcamera_client.so
-f72b5000-f72f2000 r-xp 00000000 b3:18 1462                               /system/lib/libinputflinger.so
-f7315000-f7316000 rw-p 0001d000 b3:18 1715                               /system/lib/libinput.so
-f7316000-f7363000 r-xp 00000000 b3:18 1693                               /system/lib/libgui.so
-f7380000-f7381000 rw-p 0000e000 b3:18 1365                               /system/lib/libui.so
-f7381000-f7388000 r-xp 00000000 b3:18 1540                               /system/lib/libnetutils.so
-f7392000-f7393000 rw-p 00007000 b3:18 1665                               /system/lib/libnativehelper.so
-f7393000-f73a7000 r-xp 00000000 b3:18 1893                               /system/lib/libexpat.so
-f73d4000-f73d5000 rw-p 00029000 b3:18 1558                               /system/lib/libandroidfw.so
-f73d5000-f73d8000 r-xp 00000000 b3:18 1782                               /system/lib/libmemtrack.so
-f73e4000-f73e5000 rw-p 00009000 b3:18 1672                               /system/lib/libbacktrace.so
-f73e5000-f7404000 r-xp 00000000 b3:18 1833                               /system/lib/libm.so
-f7466000-f7469000 rw-p 0005e000 b3:18 1277                               /system/lib/libc.so
-f7472000-f74fb000 r-xp 00000000 b3:18 1849                               /system/lib/libc++.so
-f752d000-f752e000 rw-p 0002b000 b3:18 1773                               /system/lib/libwilhelm.so
-f752e000-f7600000 r-xp 00000000 b3:18 1719                               /system/lib/libandroid_runtime.so
-f7642000-f7643000 rw-p 0002c000 b3:18 1809                               /system/lib/libbinder.so
-f7643000-f764c000 r-xp 00000000 b3:18 1867                               /system/lib/liblog.so
-f767c000-f767d000 rw-p 00011000 b3:18 1828                               /system/lib/libcutils.so
+ /system/lib/libwebviewchromium_loader.so
+/system/lib/libmedia_jni.huawei.so
+/system/lib/libstagefright_amrnb_common.so
+ /system/lib/libexif.so
+  /system/lib/libmtp.so
+ /system/lib/libjhead.so
+ /system/lib/libmedia_jni.so
+/system/lib/libhwaps.so
+/system/lib/libjnigraphics.so
+/system/lib/libcompiler_rt.so
+ /system/lib/libandroid.so
+/system/lib/libqservice.so
+/system/lib/libqdutils.so
+ /system/lib/hw/gralloc.msm8916.so
+ /system/lib/libqdMetaData.so
+/system/lib/libmemalloc.so
+/system/lib/libhwdeviceinfo.so
+  /system/lib/libfm_jni.so
+ /system/lib/libqmi_nv_api.so
+ /system/lib/libqmi_oem_api.so
+ /system/lib/libhw_hal.so
+ /system/lib/libhwtheme_jni.so
+ /system/lib/libkeymaster1.so
+ /system/lib/libkeymaster_messages.so
+ /system/lib/libsoftkeymasterdevice.so
+ /system/lib/libkeystore_binder.so
+/system/lib/libkeystore-engine.so
+/system/lib/libjavacrypto.so
+  /system/lib/libpowergenie_native3.so
+  /system/lib/hw/memtrack.msm8916.so
+/system/lib/libwebviewchromium_plat_support.so
+ /system/lib/libjavacore.so
+/system/lib/libqti_performance.so
+ /system/lib/libsigchain.so
+ /system/lib/libart.so
+ /system/lib/libLLVM.so
+ /system/lib/libbcinfo.so
+ /system/lib/libbcc.so
+ /system/lib/libcommon_time_client.so
+/system/lib/libprotobuf-cpp-lite.so
+/system/lib/libstagefright_avc_common.so
+/system/lib/libstagefright_enc_common.so
+ /system/lib/libpowermanager.so
+ /system/lib/lib_k3_ffmpeg.so
+ /system/lib/libvorbisidec.so
+/system/lib/libstagefright_yuv.so
+/system/lib/libstagefright_omx.so
+/system/lib/libopus.so
+ /system/lib/libmediautils.so
+ /system/lib/libdrmframework.so
+ /system/lib/libRScpp.so
+ /system/lib/libRS.so
+/system/lib/libspeexresampler.so
+/system/lib/libnbaio.so
+/system/lib/libpcre.so
+ /system/lib/liboeminfo.so
+/system/lib/libhuawei_secure.so
+ /system/lib/libwpa_client.so
+ /system/lib/libhwgl.so
+ /system/lib/libGLES_trace.so 
+ /system/lib/libft2.so
+/system/lib/libpng.so
+/system/lib/libsync.so
+/system/lib/libstdc++.so
+ /system/lib/libunwind.so
+/system/lib/libbase.so
+/system/lib/libeffects.so
+/system/lib/libstagefright_http_support.so
+ /system/lib/libstagefright_foundation.so
+ /system/lib/libstagefright.so
+ /system/lib/lib_oeminfo_interface.so
+/system/lib/libservices.huawei.so
+/system/lib/libhwui.so
+/system/lib/libperfhub_client.so
+/system/lib/libhwextdevice.so
+/system/lib/libradio_metadata.so
+/system/lib/libnativebridge.so
+/system/lib/libprocessgroup.so
+ /system/lib/libminikin.so
+ /system/lib/libsoundtrigger.so
+/system/lib/libradio.so
+/system/lib/libnetd_client.so
+ /system/lib/libimg_utils.so
+/system/lib/libpdfium.so
+ /system/lib/libaudioutils.so
+ /system/lib/libz.so
+ /system/lib/libharfbuzz_ng.so
+  /system/lib/libusbhost.so
+   /system/lib/libjpeg.so
+ /system/lib/libmedia.so
+ /system/lib/libicui18n.so
+ /system/lib/libicuuc.so
+/system/lib/libssl.so
+ /system/lib/libcrypto.so
+   /system/lib/libsonivox.so
+ /system/lib/libselinux.so
+/system/lib/libhardware_legacy.so
+/system/lib/libhardware.so
+  /system/lib/libETC1.so
+/system/lib/libGLESv2.so
+/system/lib/libGLESv1_CM.so
+ /system/lib/libEGL.so
+ /system/lib/libsqlite.so
+/system/lib/libskia.so
+/system/lib/libcamera_metadata.so
+ /system/lib/libcamera_client.so
+ /system/lib/libinputflinger.so
+/system/lib/libinput.so
+/system/lib/libgui.so
+ /system/lib/libui.so
+ /system/lib/libnetutils.so
+/system/lib/libnativehelper.so
+ /system/lib/libexpat.so
+ /system/lib/libandroidfw.so
+/system/lib/libmemtrack.so
+ /system/lib/libbacktrace.so
+ /system/lib/libm.so
+ /system/lib/libc.so
+/system/lib/libc++.so
+/system/lib/libwilhelm.so
+/system/lib/libandroid_runtime.so
+/system/lib/libbinder.so
+ /system/lib/liblog.so
+   /system/lib/libcutils.so
 
 /system/bin/app_process32
 /system/bin/linker
