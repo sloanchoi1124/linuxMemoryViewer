@@ -1,5 +1,0 @@
-we ran facebook and amazon shopping app seperately. And we observed that, they have some memory regions with the same name that shaared
-the same physical address. The complete log is saved in log.txt
-
-This is not suprising based on the conclusion we got from homework2, that zygote is the parent process of all other application 
-processes in Android and zygote optimizes the memory usage by sharing the core libraries among child processes. 
