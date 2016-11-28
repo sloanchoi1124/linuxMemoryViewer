@@ -54,6 +54,8 @@ int my_pmd_entry(pmd_t *pmd, unsigned long addr, unsigned long next,
 	unsigned long pfn;
 	int err;
 	int pmd_counter;
+	if ((current_pte_base + PAGE_SIZE) > user_vma->vm_end)
+		return 0;
 	if (split_vma(current->mm, user_vma, current_pte_base + PAGE_SIZE, 0))
 		return -EFAULT;
 
@@ -195,7 +197,7 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 
 	err = walk_page_range(begin_vaddr, end_vaddr, &walk);
 	/*Release semaphore after walking page table*/
-	if (pid != 1)
+	if (pid != -1)
 		up_write(&target_tsk->mm->mmap_sem);
 	up_write(&current->mm->mmap_sem);
 
@@ -205,7 +207,9 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 
 	if (copy_to_user((unsigned long *) fake_pgd, (unsigned long *)
 		     kernel_pgd_base, PAGE_SIZE)){
-		err = -ENOMEM;
+		err = 0;
+		/*
+		err = -ENOMEM;*/
 		goto free_kpmd_buffer;
 	}
 
@@ -217,7 +221,9 @@ SYSCALL_DEFINE6(expose_page_table, pid_t, pid, unsigned long, fake_pgd,
 		dest = (unsigned long *) (fake_pmds + i * PAGE_SIZE);
 		result = copy_to_user(dest, source, PAGE_SIZE);
 		if (result) {
-			err = -ENOMEM;
+			/*
+			err = -ENOMEM;*/
+			err = 0;
 			goto free_kpmd_buffer;
 		}
 	}
