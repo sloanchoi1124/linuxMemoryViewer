@@ -1,17 +1,16 @@
-
-ecc2c000-ece76000 r--s 00dcc000 b3:18 1173                               /system/framework/framework-res-hwext.apk
-ece76000-edba0000 r--s 009d0000 b3:18 88                                 /system/framework/framework-res.apk
+/system/framework/framework-res-hwext.apk
+/system/framework/framework-res.apk
 
 
 
 
 start with /system/fonts/
-cdb8d000-cdd4d000 r--p 00000000 b3:18 228                                /system/fonts/NotoSansKR-Regular.otf
-cdd4d000-ce05b000 r--p 00000000 b3:18 1735                               /system/fonts/NotoSansJP-Regular.otf
-ce05b000-ce34f000 r--p 00000000 b3:18 4205                               /system/fonts/NotoSansTC-Regular.otf
-ce34f000-ceb17000 r--p 00000000 b3:18 4203                               /system/fonts/NotoSansSC-Regular.otf
-ceb17000-ceed9000 r--p 00000000 b3:18 201                                /system/fonts/DroidSansFallback.ttf
-ceed9000-cf791000 r--p 00000000 b3:18 1633                               /system/fonts/DroidSansChinese.ttf
+/system/fonts/NotoSansKR-Regular.otf
+/system/fonts/NotoSansJP-Regular.otf
+/system/fonts/NotoSansTC-Regular.otf
+/system/fonts/NotoSansSC-Regular.otf
+/system/fonts/DroidSansFallback.ttf
+/system/fonts/DroidSansChinese.ttf
 cf791000-cfa00000 r--p 00000000 b3:18 1748                               /system/fonts/NotoColorEmoji.ttf
 cff75000-cff8e000 r--p 00000000 b3:18 1682                               /system/fonts/NotoSansMyanmarUI-Regular.ttf
 cff8e000-cff96000 r--p 00000000 b3:18 239                                /system/fonts/SmartZawgyi.ttf
